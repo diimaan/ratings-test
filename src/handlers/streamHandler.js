@@ -58,10 +58,57 @@ function isRenderableRating(rating) {
     return Number.isFinite(num) && num > 0;
 }
 
-function getCompactMainRatings(ratings, limit) {
-    return ratings
-        .filter(r => isRenderableRating(r) && !TOP_PRIORITY_SOURCES.has(r.source))
-        .slice(0, limit);
+function getCompactPriorityGroups(type) {
+    if (type === 'movie') {
+        return [
+            ['IMDb (Movie)'],
+            ['TMDb (Movie)'],
+        ];
+    }
+
+    return [
+        ['IMDb (Episode)', 'IMDb (Show)'],
+        ['TMDb (Episode)', 'TMDb (Show)'],
+    ];
+}
+
+function getCompactMainRatings(ratings, type, limit) {
+    const candidates = ratings
+        .filter(r => isRenderableRating(r) && !TOP_PRIORITY_SOURCES.has(r.source));
+
+    const priorityGroups = getCompactPriorityGroups(type);
+    const pickedSources = new Set();
+    const selected = [];
+
+    for (const group of priorityGroups) {
+        const match = candidates.find(
+            rating => !pickedSources.has(rating.source) && group.includes(rating.source)
+        );
+
+        if (match) {
+            selected.push(match);
+            pickedSources.add(match.source);
+        }
+
+        if (selected.length >= limit) {
+            return selected.slice(0, limit);
+        }
+    }
+
+    for (const rating of candidates) {
+        if (selected.length >= limit) {
+            break;
+        }
+
+        if (pickedSources.has(rating.source)) {
+            continue;
+        }
+
+        selected.push(rating);
+        pickedSources.add(rating.source);
+    }
+
+    return selected.slice(0, limit);
 }
 
 function getSpecialRatings(ratings) {
@@ -110,11 +157,11 @@ function wrapWithDivider(content) {
     return `${DIVIDER}\n${content}\n${DIVIDER}`;
 }
 
-function formatCompactRatings(ratings) {
+function formatCompactRatings(ratings, type) {
     if (!Array.isArray(ratings) || ratings.length === 0) return '';
 
     const limit = config.ratings.compactLimit || 4;
-    const mainRatings = getCompactMainRatings(ratings, limit);
+    const mainRatings = getCompactMainRatings(ratings, type, limit);
     const lines = buildTopLines(ratings);
 
     const ratingsLine = mainRatings
@@ -143,11 +190,11 @@ function formatFullRatings(ratings) {
     return wrapWithDivider(lines.join('\n'));
 }
 
-function formatRatingsCard(ratings) {
+function formatRatingsCard(ratings, type) {
     const mode = (config.ratings.displayMode || 'full').toLowerCase();
 
     if (mode === 'compact') {
-        return formatCompactRatings(ratings);
+        return formatCompactRatings(ratings, type);
     }
 
     return formatFullRatings(ratings);
@@ -168,7 +215,7 @@ async function streamHandler({ type, id }) {
         return { streams: [] };
     }
 
-    const description = formatRatingsCard(ratings);
+    const description = formatRatingsCard(ratings, type);
 
     logger.info(`Resolved ratings payload for ${id}: ${JSON.stringify(ratings)}`);
     logger.info(`Resolved description for ${id}: ${JSON.stringify(description)}`);
