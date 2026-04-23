@@ -16,35 +16,25 @@ function getMetacriticUrl(title, type) {
 
 function scrapeMetacriticPage(html, url) {
     const $ = cheerio.load(html);
-    const results = [];
 
-    // --- Critics ---
-    const criticScore = $('[data-testid="critic-score-info"] .c-siteReviewScore span').first().text().trim();
+    const criticScore = $('[data-testid="critic-score-info"] .c-siteReviewScore span')
+        .first()
+        .text()
+        .trim();
+
     if (/^\d+$/.test(criticScore)) {
         const score = parseInt(criticScore, 10);
+
         if (score >= 0 && score <= 100) {
-            results.push({
+            return {
                 source: 'MC',
                 value: `${score}/100`,
                 url,
-            });
+            };
         }
     }
 
-    // --- Users ---
-    const userScore = $('[data-testid="user-score-info"] .c-siteReviewScore span').first().text().trim();
-    if (/^\d+(\.\d+)?$/.test(userScore)) {
-        const score = parseFloat(userScore);
-        if (score >= 0 && score <= 10) {
-            results.push({
-                source: 'MC Users',
-                value: `${score}/10`,
-                url,
-            });
-        }
-    }
-
-    return results.length ? results : null;
+    return null;
 }
 
 async function getRating(type, imdbId, streamInfo) {

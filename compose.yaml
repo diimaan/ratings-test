@@ -1,0 +1,69 @@
+services:
+  ratings-aggregator:
+    build:
+      context: .
+      args:
+        VITE_HOME_BLURB: ${VITE_HOME_BLURB}
+    image: ${RATINGS_IMAGE}
+    container_name: ${RATINGS_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      LOG_LEVEL: ${LOG_LEVEL}
+      HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      TMDB_API_URL: ${TMDB_API_URL}
+      MDBLIST_API_KEY: ${MDBLIST_API_KEY}
+      MDBLIST_API_URL: ${MDBLIST_API_URL}
+      PUBLICMETADB_API_KEY: ${PUBLICMETADB_API_KEY}
+      PUBLICMETADB_API_URL: ${PUBLICMETADB_API_URL}
+      REDIS_URL: ${REDIS_URL}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS}
+      NEGATIVE_CACHE_TTL_SECONDS: ${NEGATIVE_CACHE_TTL_SECONDS}
+      DISPLAY_MODE: ${DISPLAY_MODE}
+      COMPACT_RATINGS_LIMIT: ${COMPACT_RATINGS_LIMIT}
+      ENABLED_RATINGS: ${ENABLED_RATINGS}
+      RATINGS_ORDER: ${RATINGS_ORDER}
+      IMDB_BASE_URL: ${IMDB_BASE_URL}
+      COMMONSENSE_BASE_URL: ${COMMONSENSE_BASE_URL}
+      CRINGEMDB_BASE_URL: ${CRINGEMDB_BASE_URL}
+      USER_AGENT: ${USER_AGENT}
+      ADDON_SUFFIX: ${ADDON_SUFFIX}
+      VITE_HOME_BLURB: ${VITE_HOME_BLURB}
+    expose:
+      - "${PORT}"
+    depends_on:
+      - redis
+    volumes:
+      - ${RATINGS_IMDB_DATA_DIR}:/app/data/imdb:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${DOCKER_NETWORK}
+      - traefik.http.routers.ratings.rule=Host(`${RATINGS_HOSTNAME}`)
+      - traefik.http.routers.ratings.entrypoints=${TRAEFIK_ENTRYPOINTS}
+      - traefik.http.routers.ratings.tls=true
+      - traefik.http.routers.ratings.tls.certresolver=${TRAEFIK_CERTRESOLVER}
+      - traefik.http.services.ratings.loadbalancer.server.port=${PORT}
+
+  redis:
+    image: ${REDIS_IMAGE}
+    container_name: ${REDIS_CONTAINER_NAME}
+    restart: unless-stopped
+    volumes:
+      - ${RATINGS_REDIS_DATA_DIR}:/data
+    networks:
+      - default
+
+networks:
+  default:
+    name: ${DOCKER_NETWORK}
+    external: true

@@ -1,81 +1,136 @@
-// config/index.js
 require('dotenv').config();
 
 const pkg = require('../../package.json');
 const addonManifest = require('./manifest');
+
+function parseCsv(value, fallback = []) {
+    if (!value || typeof value !== 'string') return fallback;
+    return value
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+}
+
+const defaultEnabledRatings = [
+    'Common Sense',
+    'Not Safe',
+    'Sexual Violence',
+    'Sex & Nudity',
+    'IMDb (Movie)',
+    'IMDb (Show)',
+    'IMDb (Episode)',
+    'TMDb (Movie)',
+    'TMDb (Show)',
+    'TMDb (Episode)',
+    'MDBList',
+    'MC',
+    'RT',
+    'PC',
+    'Trakt',
+    'MAL',
+    'Letterboxd',
+    'Roger Ebert',
+];
+
+const defaultRatingsOrder = [
+    'Common Sense',
+    'Not Safe',
+    'Sexual Violence',
+    'Sex & Nudity',
+    'IMDb (Episode)',
+    'IMDb (Show)',
+    'IMDb (Movie)',
+    'TMDb (Episode)',
+    'TMDb (Show)',
+    'TMDb (Movie)',
+    'MAL',
+    'Letterboxd',
+    'MDBList',
+    'MC',
+    'RT',
+    'PC',
+    'Trakt',
+    'Roger Ebert',
+];
+
+const compactCountRaw = parseInt(process.env.COMPACT_RATINGS_LIMIT || '4', 10);
+const compactCount = Number.isFinite(compactCountRaw) && compactCountRaw > 0
+    ? compactCountRaw
+    : 4;
+
+const displayModeRaw = (process.env.DISPLAY_MODE || 'full').trim().toLowerCase();
+const displayMode = ['compact', 'full'].includes(displayModeRaw) ? displayModeRaw : 'full';
 
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
     centralUrl: 'https://rating-aggregator.elfhosted.com/manifest.json',
     http: {
-        requestTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS || '12000', 10), // 12 seconds default
+        requestTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS || process.env.PROVIDER_TIMEOUT || '12000', 10),
     },
     tmdb: {
         apiKey: process.env.TMDB_API_KEY,
-        apiUrl: 'https://api.themoviedb.org/3',
+        apiUrl: process.env.TMDB_API_URL || 'https://api.themoviedb.org/3',
+    },
+    mdblist: {
+        apiKey: process.env.MDBLIST_API_KEY,
+        apiUrl: process.env.MDBLIST_API_URL || 'https://api.mdblist.com',
+    },
+    publicmetadb: {
+        apiKey: process.env.PUBLICMETADB_API_KEY || '',
+        apiUrl: process.env.PUBLICMETADB_API_URL || 'https://publicmetadb.com/api',
     },
     redis: {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
     },
     cache: {
-        // Default TTL: 3 days in seconds (adjust as needed)
-        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '259200', 10), // 3 * 24 * 60 * 60
-        // Keep shorter negative TTL from previous step
-        negativeTtlSeconds: parseInt(process.env.NEGATIVE_CACHE_TTL_SECONDS || '21600', 10), // 6 hours
+        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '259200', 10),
+        negativeTtlSeconds: parseInt(process.env.NEGATIVE_CACHE_TTL_SECONDS || '21600', 10),
+    },
+    ratings: {
+        enabled: parseCsv(process.env.ENABLED_RATINGS, defaultEnabledRatings),
+        order: parseCsv(process.env.RATINGS_ORDER, defaultRatingsOrder),
+        displayMode,
+        compactLimit: compactCount,
     },
     sources: {
         imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
-        metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
         commonSenseBaseUrl: process.env.COMMONSENSE_BASE_URL || 'https://www.commonsensemedia.org',
-        rottentomatoesBaseUrl: process.env.ROTTENTOMATOES_BASE_URL || 'https://www.rottentomatoes.com',
         cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
     },
-    userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36', // Update UA periodically
+    userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
     addon: addonManifest,
+    package: pkg,
 };
 
-// --- Validations ---
 let hasFatalError = false;
 let hasWarning = false;
 
-// Essential
 if (!config.tmdb.apiKey) {
     console.error('FATAL ERROR: TMDB_API_KEY is not set.');
     hasFatalError = true;
 }
-if (!config.redis.url || config.redis.url === 'redis://localhost:6379') {
-    // Only warn if it's missing or default, allow explicit localhost
-    if (!process.env.REDIS_URL) {
-        console.warn('WARNING: REDIS_URL is not set. Caching will use default redis://localhost:6379.');
-        hasWarning = true;
-    }
-}
 
-// Base URLs for scrapers
-if (!config.sources.imdbBaseUrl) {
-    console.warn('WARNING: IMDB_BASE_URL is not set. IMDb provider may fail.');
-    hasWarning = true;
-}
-if (!config.sources.metacriticBaseUrl) {
-    console.warn('WARNING: METACRITIC_BASE_URL is not set. Metacritic provider may fail.');
-    hasWarning = true;
-}
-if (!config.sources.commonSenseBaseUrl) {
-    console.warn('WARNING: COMMONSENSE_BASE_URL is not set. Common Sense provider may fail.');
-    hasWarning = true;
-}
-if (!config.sources.cringeMdbBaseUrl) {
-    console.warn('WARNING: CRINGEMDB_BASE_URL is not set. CringeMDB provider may fail.');
+if (!process.env.REDIS_URL) {
+    console.warn('WARNING: REDIS_URL is not set. Caching will use default redis://localhost:6379.');
     hasWarning = true;
 }
 
-// Log summary
+if (!config.mdblist.apiKey) {
+    console.warn('WARNING: MDBLIST_API_KEY is not set. MDBList-dependent ratings will be skipped.');
+    hasWarning = true;
+}
+
+if (!config.publicmetadb.apiKey) {
+    console.warn('WARNING: PUBLICMETADB_API_KEY is not set. PublicMetaDB ratings will be skipped.');
+    hasWarning = true;
+}
+
 if (hasFatalError) {
-    console.error("Critical configuration missing. Please check environment variables. Exiting.");
+    console.error('Critical configuration missing. Please check environment variables. Exiting.');
     process.exit(1);
 } else if (hasWarning) {
-    console.warn("One or more configuration warnings detected. Service might not function fully.");
+    console.warn('One or more configuration warnings detected. Service might not function fully.');
 }
 
 module.exports = config;

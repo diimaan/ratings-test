@@ -23,66 +23,66 @@ function buildCandidateUrls(title, type, year) {
     const urls = [];
 
     if (year) {
-        urls.push(`${BASE_URL}/${path}/${slug}_${year}`);        // first: movie_2024
+        urls.push(`${BASE_URL}/${path}/${slug}_${year}`);
     }
 
-    urls.push(`${BASE_URL}/${path}/${slug}`);                    // second: movie
+    urls.push(`${BASE_URL}/${path}/${slug}`);
 
     if (year) {
-        urls.push(`${BASE_URL}/${path}/${slug}_${year}_2`);      // third: movie_2024_2
+        urls.push(`${BASE_URL}/${path}/${slug}_${year}_2`);
     }
 
     return urls;
 }
 
-
 function parseJsonLd($) {
-    const ratings = [];
+    let criticRating = null;
 
     $('script[type="application/ld+json"]').each((_, el) => {
         try {
             const json = JSON.parse($(el).html());
 
-            if (json.aggregateRating?.ratingValue) {
-                const val = parseInt(json.aggregateRating.ratingValue.toString().replace('%', ''), 10);
-                if (!isNaN(val)) ratings.push({ source: 'RT', value: `${val}/100`, type: 'Critics' });
+            if (json.aggregateRating?.ratingValue !== undefined && json.aggregateRating?.ratingValue !== null) {
+                const val = parseInt(String(json.aggregateRating.ratingValue).replace('%', ''), 10);
+                if (!isNaN(val)) {
+                    criticRating = {
+                        source: 'RT',
+                        value: `${val}/100`,
+                    };
+                }
             }
-
-            if (json.audience?.audienceScore) {
-                const val = parseInt(json.audience.audienceScore.toString().replace('%', ''), 10);
-                if (!isNaN(val)) ratings.push({ source: 'RT Users', value: `${val}/100`, type: 'Audience' });
-            }
-        } catch { /* ignore bad JSON */ }
+        } catch {
+            // ignore bad json
+        }
     });
 
-    return ratings;
+    return criticRating;
 }
 
 function scrapeDom($) {
-    const ratings = [];
-
     const critic = $('rt-text[slot="criticsScore"]').first().text().trim();
-    const user = $('rt-text[slot="audienceScore"]').first().text().trim();
 
-    if (/^\d+$/.test(critic)) ratings.push({ source: 'RT', value: `${critic}/100`, type: 'Critics' });
-    if (/^\d+$/.test(user)) ratings.push({ source: 'RT Users', value: `${user}/100`, type: 'Audience' });
+    if (/^\d+$/.test(critic)) {
+        return {
+            source: 'RT',
+            value: `${critic}/100`,
+        };
+    }
 
-    return ratings;
+    return null;
 }
 
 function scrape(html, url) {
     try {
         const $ = cheerio.load(html);
-        const all = [...parseJsonLd($), ...scrapeDom($)];
 
-        const seen = new Set();
-        const unique = all.filter(r => {
-            if (seen.has(r.source)) return false;
-            seen.add(r.source);
-            return true;
-        });
+        const fromJsonLd = parseJsonLd($);
+        if (fromJsonLd) return { ...fromJsonLd, url };
 
-        return unique.length ? unique.map(r => ({ ...r, url })) : null;
+        const fromDom = scrapeDom($);
+        if (fromDom) return { ...fromDom, url };
+
+        return null;
     } catch (err) {
         logger.error(`[${PROVIDER_NAME}] Scrape error for ${url}: ${err.message}`);
         return null;
@@ -91,11 +91,12 @@ function scrape(html, url) {
 
 async function tryFetch(url) {
     logger.debug(`[${PROVIDER_NAME}] Trying URL: ${url}`);
+
     const res = await getPage(url, PROVIDER_NAME, {
         headers: {
             Referer: BASE_URL,
-            Accept: 'text/html,application/xhtml+xml'
-        }
+            Accept: 'text/html,application/xhtml+xml',
+        },
     });
 
     if (res?.status === 200) return scrape(res.data, url);
@@ -113,7 +114,7 @@ async function getRating(type, imdbId, streamInfo) {
         if (result) return result;
     }
 
-    logger.debug(`[${PROVIDER_NAME}] No valid ratings found for ${imdbId}`);
+    logger.debug(`[${PROVIDER_NAME}] No valid RT rating found for ${imdbId}`);
     return null;
 }
 

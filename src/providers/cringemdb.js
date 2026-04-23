@@ -3,77 +3,141 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const { getPage } = require('../utils/httpClient');
 const { formatTitleForUrlSlug } = require('../utils/urlFormatter');
+const { getWarningLabel } = require('../utils/emojiMapper');
 
 const PROVIDER_NAME = 'CringeMDB';
 const BASE_URL = config.sources.cringeMdbBaseUrl;
 
-function getCringeMDBUrl(title, year) {
-    if (!title || !year || !BASE_URL) return null;
+function getCringeUrl(title, year) {
+    if (!title || !BASE_URL) return null;
 
-    const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '')
-        .trim()
-        .replace(/\s+/g, '-');
+    const slug = formatTitleForUrlSlug(title);
+    if (!slug) return null;
 
-    return slug ? `${BASE_URL}/movie/${slug}-${year}` : null;
+    return year
+        ? `${BASE_URL}/movie/${slug}-${year}`
+        : `${BASE_URL}/movie/${slug}`;
 }
 
-function scrapeWarnings(html, url) {
-    const $ = cheerio.load(html);
-    const warnings = [];
+function cleanText(value) {
+    return String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
-    // Certification
-    const isSafe = $('.certification .emoji .safe').length > 0;
-    const certText = isSafe ? '✅ Parent-Safe' : '⚠️ Not Parent Safe';
-    warnings.push({ category: 'Certification', text: certText });
-    logger.debug(`[${PROVIDER_NAME}] Certification: ${certText}`);
+function normalizeFlag(text) {
+    const raw = cleanText(text).toLowerCase();
 
-    // Flags
-    const emojiMap = {
-        'Sex Scene': '🔞',
-        'Nudity': '👁️‍🗨️',
-        'Sexual Violence': '💔',
-        // 'Graphic Violence': '🩸',
-        // 'Drug Use': '💊',
-        // 'Excessive Swearing': '🤬',
-    };
+    if (!raw) return null;
 
-    $('.content-warnings .content-flag').each((_, el) => {
-        const category = $(el).find('h3').text().trim();
-        const value = $(el).find('h4').text().trim();
+    if (raw.includes('sex') || raw.includes('nudity')) {
+        return 'Sex & Nudity';
+    }
 
-        if (value.toUpperCase() === 'YES') {
-            const emoji = emojiMap[category] || '🚩';
-            warnings.push({ category, text: `${emoji} ${category}` });
-            logger.debug(`[${PROVIDER_NAME}] Flagged: ${category}`);
+    if (raw.includes('sexual violence')) {
+        return 'Sexual Violence';
+    }
+
+    if (raw.includes('violence')) {
+        return 'Violence & Scariness';
+    }
+
+    if (raw.includes('swearing') || raw.includes('language')) {
+        return 'Language';
+    }
+
+    if (
+        raw.includes('drug') ||
+        raw.includes('alcohol') ||
+        raw.includes('smoking')
+    ) {
+        return 'Drugs Usage';
+    }
+
+    return null;
+}
+
+function extractCertification($) {
+    const badge = cleanText($('.badge').first().text());
+
+    if (!badge) return null;
+
+    if (/parent safe/i.test(badge)) {
+        logger.debug(`[${PROVIDER_NAME}] Certification: Certified Parent Safe`);
+        return 'safe';
+    }
+
+    if (/not parent safe/i.test(badge)) {
+        logger.debug(`[${PROVIDER_NAME}] Certification: Not Parent Safe`);
+        return 'unsafe';
+    }
+
+    return null;
+}
+
+function extractFlags($) {
+    const categories = new Set();
+
+    $('.list-group-item').each((_, el) => {
+        const text = cleanText($(el).text());
+        const normalized = normalizeFlag(text);
+
+        if (normalized) {
+            categories.add(normalized);
+            logger.debug(`[${PROVIDER_NAME}] Flagged: ${normalized}`);
         }
     });
 
-    if (warnings.length === 0) return null;
+    return Array.from(categories);
+}
 
-    const cert = warnings.find(w => w.category === 'Certification')?.text;
-    const others = warnings.filter(w => w.category !== 'Certification').map(w => w.text);
+function buildWarningOutput(certification, flags, url) {
+    const lines = [];
+
+    if (certification === 'safe') {
+        lines.push('✅ Certified Parent Safe');
+    } else if (certification === 'unsafe') {
+        lines.push('⚠️ Not Parent Safe');
+    }
+
+    if (flags && flags.length) {
+        for (const category of flags) {
+            lines.push(getWarningLabel(category));
+        }
+    }
+
+    if (!lines.length) return null;
 
     return {
         source: PROVIDER_NAME,
-        value: [cert, ...others].filter(Boolean).join('\n'),
+        value: lines.join('\n'),
         url,
     };
 }
 
-async function getRating(type, imdbId, streamInfo) {
-    if (type !== 'movie') return null;
-    if (!streamInfo?.name || !streamInfo?.year || !BASE_URL) return null;
+async function getRating(type, _imdbId, streamInfo) {
+    // Strictly movie-only
+    if (type !== 'movie') {
+        logger.debug(`[${PROVIDER_NAME}] Skipping non-movie request`);
+        return null;
+    }
 
-    const url = getCringeMDBUrl(streamInfo.name, streamInfo.year);
+    if (!streamInfo?.name || !BASE_URL) return null;
+
+    const url = getCringeUrl(streamInfo.name, streamInfo.year);
     if (!url) return null;
 
     logger.debug(`[${PROVIDER_NAME}] Fetching ${url}`);
     const res = await getPage(url, PROVIDER_NAME);
+
     if (!res || res.status !== 200) return null;
 
-    return scrapeWarnings(res.data, url);
+    const $ = cheerio.load(res.data);
+
+    const certification = extractCertification($);
+    const flags = extractFlags($);
+
+    return buildWarningOutput(certification, flags, url);
 }
 
 module.exports = {
