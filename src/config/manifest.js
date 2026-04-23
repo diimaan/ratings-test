@@ -8,7 +8,7 @@ module.exports = {
     name: process.env.ADDON_SUFFIX
         ? `🎯 Ratings Aggregator | ${process.env.ADDON_SUFFIX}`
         : '🎯 Ratings Aggregator',
-    description: 'Tired of tab-hopping? Get all your essential movie and series ratings in one place! Aggregates scores from IMDb, TMDb, Metacritic (critic & user), Common Sense Media, and CringeMDB (parent-safe tags). Streamline your watch decisions!',
+    description: 'Get essential movie and series ratings in one place, with native IMDb and TMDb scores, aggregated cross-source data, and derived safety signals for faster watch decisions.',
     logo: 'https://emojicdn.elk.sh/%F0%9F%8E%AF?style=google',
     catalogs: [],
     resources: ['stream'],

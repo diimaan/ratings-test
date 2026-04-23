@@ -3,7 +3,7 @@
 [![Addon Preview - See all ratings in one place!](https://i.postimg.cc/kGG69XG6/Screenshot-From-2025-04-22-00-06-01.png)](https://postimg.cc/ctq4BWQ0)
 **(Click the image to see it in action!)**
 
-Tired of juggling _IMDb, TMDb, Metacritic, Common Sense,_ and _CringeMDB_ tabs *just* to decide what to watch? 😫 Yeah, us too!
+Tired of juggling _IMDb, TMDb,_ and a bunch of scattered rating sources *just* to decide what to watch? Yeah, us too.
 
 **Meet the Stremio Ratings Aggregator!** This little powerhouse, built *by* the community *for* the community, jams all those crucial ratings into **one handy card** right inside Stremio. 🎬
 
@@ -30,8 +30,8 @@ We're building this for YOU! **What other rating sites (Rotten Tomatoes? Letterb
 * ⭐ **IMDb:** The classic crowd score.
 * 🎥 **TMDb:** API-powered scores for movies & shows.
 * Ⓜ️ **Metacritic:** Both critic metascores AND user ratings.
-* 🧐 **Common Sense Media:** Know what's family-friendly. *(Help us test this!)*
-* 🤖 **CringeMDB:** Quick parent-safe checks for movies. *(Beta)*
+* 👪 **Derived safety signals:** Surface age guidance and key warnings from the aggregation layer when available
+* 🧠 **Aggregated cross-source ratings:** Pull supporting data like MC, RT, PC, Trakt, Letterboxd, Roger Ebert, and MAL where available
 * ⚡ **Super Speedy:** Redis caching means ratings load *fast*. No waiting around!
 * 🛠️ **Built for Tinkering:** Open source Node.js codebase - easy for others to jump in and help! ([Hint, hint! 😉](https://github.com/anmol210202/rating-aggregator-))
 

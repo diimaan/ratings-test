@@ -3,7 +3,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 
 const PROVIDER_NAME = 'Jikan';
-const API_URL = config.jikan?.apiUrl || 'https://api.jikan.moe/v4';
+const API_URL = config.jikan.apiUrl;
 
 // Require a very confident match for title-based lookup.
 // This effectively means exact title match, optionally strengthened by year/anime signals.

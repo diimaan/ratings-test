@@ -3,12 +3,20 @@ require('dotenv').config();
 const pkg = require('../../package.json');
 const addonManifest = require('./manifest');
 
+const DEFAULT_HTTP_TIMEOUT_MS = 12000;
+const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
+
 function parseCsv(value, fallback = []) {
     if (!value || typeof value !== 'string') return fallback;
     return value
         .split(',')
         .map(v => v.trim())
         .filter(Boolean);
+}
+
+function parsePositiveInt(value, fallback) {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 const defaultEnabledRatings = [
@@ -53,20 +61,19 @@ const defaultRatingsOrder = [
     'Roger Ebert',
 ];
 
-const compactCountRaw = parseInt(process.env.COMPACT_RATINGS_LIMIT || '4', 10);
-const compactCount = Number.isFinite(compactCountRaw) && compactCountRaw > 0
-    ? compactCountRaw
-    : 4;
-
+const compactCount = parsePositiveInt(process.env.COMPACT_RATINGS_LIMIT, 4);
 const displayModeRaw = (process.env.DISPLAY_MODE || 'full').trim().toLowerCase();
 const displayMode = ['compact', 'full'].includes(displayModeRaw) ? displayModeRaw : 'full';
+const requestTimeoutMs = parsePositiveInt(
+    process.env.HTTP_TIMEOUT_MS || process.env.PROVIDER_TIMEOUT,
+    DEFAULT_HTTP_TIMEOUT_MS
+);
 
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
-    centralUrl: 'https://rating-aggregator.elfhosted.com/manifest.json',
     http: {
-        requestTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS || process.env.PROVIDER_TIMEOUT || '12000', 10),
+        requestTimeoutMs,
     },
     tmdb: {
         apiKey: process.env.TMDB_API_KEY,
@@ -80,12 +87,15 @@ const config = {
         apiKey: process.env.PUBLICMETADB_API_KEY || '',
         apiUrl: process.env.PUBLICMETADB_API_URL || 'https://publicmetadb.com/api',
     },
+    jikan: {
+        apiUrl: process.env.JIKAN_API_URL || 'https://api.jikan.moe/v4',
+    },
     redis: {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
     },
     cache: {
-        ttlSeconds: parseInt(process.env.CACHE_TTL_SECONDS || '259200', 10),
-        negativeTtlSeconds: parseInt(process.env.NEGATIVE_CACHE_TTL_SECONDS || '21600', 10),
+        ttlSeconds: parsePositiveInt(process.env.CACHE_TTL_SECONDS, 259200),
+        negativeTtlSeconds: parsePositiveInt(process.env.NEGATIVE_CACHE_TTL_SECONDS, 21600),
     },
     ratings: {
         enabled: parseCsv(process.env.ENABLED_RATINGS, defaultEnabledRatings),
@@ -95,10 +105,12 @@ const config = {
     },
     sources: {
         imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
+        metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
+        rottentomatoesBaseUrl: process.env.ROTTENTOMATOES_BASE_URL || 'https://www.rottentomatoes.com',
         commonSenseBaseUrl: process.env.COMMONSENSE_BASE_URL || 'https://www.commonsensemedia.org',
         cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
     },
-    userAgent: process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    userAgent: process.env.USER_AGENT || DEFAULT_USER_AGENT,
     addon: addonManifest,
     package: pkg,
 };
