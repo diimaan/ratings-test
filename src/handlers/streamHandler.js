@@ -73,19 +73,19 @@ function getSpecialRatings(ratings) {
         r => r && r.source === 'Not Safe' && isRenderableRating(r)
     );
 
-    const sexualWarning = ratings.find(
+    const sexualWarnings = ratings.filter(
         r =>
             r &&
             (r.source === 'Sexual Violence' || r.source === 'Sex & Nudity') &&
             isRenderableRating(r)
     );
 
-    return { parental, notSafe, sexualWarning };
+    return { parental, notSafe, sexualWarnings };
 }
 
 function buildTopLines(ratings) {
     const lines = [];
-    const { parental, notSafe, sexualWarning } = getSpecialRatings(ratings);
+    const { parental, notSafe, sexualWarnings } = getSpecialRatings(ratings);
 
     if (parental) {
         lines.push(`👪 ${stripScale(parental.value, parental.source)}`);
@@ -95,8 +95,11 @@ function buildTopLines(ratings) {
         lines.push(stripScale(notSafe.value, notSafe.source));
     }
 
-    if (sexualWarning) {
-        lines.push(stripScale(sexualWarning.value, sexualWarning.source));
+    for (const warning of sexualWarnings) {
+        const line = stripScale(warning.value, warning.source);
+        if (line && !lines.includes(line)) {
+            lines.push(line);
+        }
     }
 
     return lines;
