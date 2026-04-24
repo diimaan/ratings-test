@@ -23,13 +23,13 @@ async function resolveMalRatings(type, rawId, ctx, streamInfo, tmdbId, mdblistRe
     const mdblistRaw = findMdblistRawPayload(mdblistFlat);
 
     const looksAnime = isLikelyAnimeFromMdblistRaw(mdblistRaw);
+    const malId = mdblistRaw?.ids?.mal;
+    const hasAnimeSignal = Boolean(looksAnime || malId || mdblistFamily);
 
     if (!looksAnime && mdblistRaw) {
         logger.info('Skipping MAL resolution for non-anime title');
         return [];
     }
-
-    const malId = mdblistRaw?.ids?.mal;
 
     if (malId && providers.jikanProvider?.getByMalId) {
         try {
@@ -55,6 +55,11 @@ async function resolveMalRatings(type, rawId, ctx, streamInfo, tmdbId, mdblistRe
     if (pmdbFamily) {
         logger.info('MAL rating found via PMDB');
         return [pmdbFamily];
+    }
+
+    if (!hasAnimeSignal) {
+        logger.info('Skipping Jikan search fallback without a strong anime signal');
+        return [];
     }
 
     try {
