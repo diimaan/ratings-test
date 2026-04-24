@@ -11,14 +11,14 @@ Tired of juggling _IMDb, TMDb,_ and a bunch of scattered rating sources *just* t
 
 ---
 
-# 🤔 You Tell Us: What's Next?
-We're building this for YOU! **What other rating sites (Rotten Tomatoes? Letterboxd?) or awesome features should we add?** Drop your ideas in the [Issues & Feedback section](https://github.com/anmol210202/rating-aggregator-/issues)! Your input directly shapes the future of this addon! 💬
+# 🤔 What This Branch Focuses On
+This fork is being shaped around native IMDb/TMDb ratings, MDBList-first aggregation, derived safety signals, and cleaner self-hosted deployment.
 
 ---
 
 # 🚀 Get Started in Seconds:
 
-1.  **Grab the Magic Link:** Head over to the [**Configure Page**](https://rating-aggregator.elfhosted.com/configure/) and copy that Manifest URL. ✨
+1.  **Grab the Manifest URL:** Open the configure page on your own deployment and copy the generated manifest URL. ✨
 2.  **Beam it to Stremio:** Open Stremio, navigate to **Addons** → **Community Add-ons** (or might be just "Addons"), find the **Custom**/**Install from URL** option. ⚙️
 3.  **Paste & Activate:** Paste the URL you copied and hit **Install** (or Add/Okay). ✅
 4.  **🎉 BAM! 🎉** Unified ratings are now baked right into your Stremio experience! Enjoy the clarity!
@@ -33,7 +33,7 @@ We're building this for YOU! **What other rating sites (Rotten Tomatoes? Letterb
 * 👪 **Derived safety signals:** Surface age guidance and key warnings from the aggregation layer when available
 * 🧠 **Aggregated cross-source ratings:** Pull supporting data like MC, RT, PC, Trakt, Letterboxd, Roger Ebert, and MAL where available
 * ⚡ **Super Speedy:** Redis caching means ratings load *fast*. No waiting around!
-* 🛠️ **Built for Tinkering:** Open source Node.js codebase - easy for others to jump in and help! ([Hint, hint! 😉](https://github.com/anmol210202/rating-aggregator-))
+* 🛠️ **Built for Tinkering:** Open source Node.js codebase, now being cleaned up for a more maintainable self-hosted workflow.
 
 ---
 
@@ -42,8 +42,8 @@ We're building this for YOU! **What other rating sites (Rotten Tomatoes? Letterb
 Heads up! This addon is currently in **Beta**. We're actively squashing bugs and adding polish!
 
 * 📺 **Android TV:** We're tuning the display for the big screen.
-* 🔧 **Self-Hosting:** A script is coming for you power-users!
-* 🍅 **Placeholders:** Letterboxd & Rotten Tomatoes spots are ready and waiting for future integration (pending feasibility & demand!).
+* 🔧 **Self-Hosting:** Docker and Traefik-friendly deployment are active priorities.
+* 🍅 **Provider cleanup:** MDBList is the recommended aggregation layer, with Public MetaDB as an experimental fallback.
 
 **Our mission:** Stable release, smarter data fetching, and even better error handling based on *your* feedback!
 
@@ -54,7 +54,7 @@ Heads up! This addon is currently in **Beta**. We're actively squashing bugs and
 If this addon saves you time and hassle, could you do us a *huge* favor?
 
 🌟 **Please Star the Repo on GitHub!** 🌟
-[**➡️ Visit the Repo & Click Star ⭐**](https://github.com/anmol210202/rating-aggregator-)
+[**➡️ Visit the Repo & Click Star ⭐**](https://github.com/diimaan/ratings-test)
 
 Starring helps more people discover the addon, motivates development, and frankly, just makes us feel warm and fuzzy. 😊 It's the easiest way to say "Thanks!"
 
@@ -62,8 +62,8 @@ Starring helps more people discover the addon, motivates development, and frankl
 
 # 🔗 Quick Links:
 
-* **Try the Beta / Get Manifest URL:** [Configure Page](https://rating-aggregator.elfhosted.com/configure/)
-* **See the Code / Star Us ⭐:** [GitHub Repo](https://github.com/anmol210202/rating-aggregator-)
-* **Report Bugs / Suggest Features:** [Issues & Feedback](https://github.com/anmol210202/rating-aggregator-/issues)
+* **Get Manifest URL:** Open `/configure` on your deployment
+* **See the Code / Star Us ⭐:** [GitHub Repo](https://github.com/diimaan/ratings-test)
+* **Report Bugs / Suggest Features:** [Issues & Feedback](https://github.com/diimaan/ratings-test/issues)
 
 **Happy Watching!** 🍿

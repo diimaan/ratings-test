@@ -130,13 +130,20 @@ function getSpecialRatings(ratings) {
     return { parental, notSafe, sexualWarnings };
 }
 
-function buildTopLines(ratings) {
+function buildAgeLines(ratings) {
     const lines = [];
-    const { parental, notSafe, sexualWarnings } = getSpecialRatings(ratings);
+    const { parental } = getSpecialRatings(ratings);
 
     if (parental) {
         lines.push(`👪 ${stripScale(parental.value, parental.source)}`);
     }
+
+    return lines;
+}
+
+function buildWarningLines(ratings) {
+    const lines = [];
+    const { notSafe, sexualWarnings } = getSpecialRatings(ratings);
 
     if (notSafe) {
         lines.push(stripScale(notSafe.value, notSafe.source));
@@ -162,7 +169,7 @@ function formatCompactRatings(ratings, type) {
 
     const limit = config.ratings.compactLimit || 4;
     const mainRatings = getCompactMainRatings(ratings, type, limit);
-    const lines = buildTopLines(ratings);
+    const lines = buildAgeLines(ratings);
 
     const ratingsLine = mainRatings
         .map(r => `${getCompactLabel(r.source)} ${stripScale(r.value, r.source)}`)
@@ -172,13 +179,15 @@ function formatCompactRatings(ratings, type) {
         lines.push(ratingsLine);
     }
 
+    lines.push(...buildWarningLines(ratings));
+
     return wrapWithDivider(lines.join('\n'));
 }
 
 function formatFullRatings(ratings) {
     if (!Array.isArray(ratings) || ratings.length === 0) return '';
 
-    const lines = buildTopLines(ratings);
+    const lines = buildAgeLines(ratings);
 
     for (const r of ratings) {
         if (!isRenderableRating(r)) continue;
@@ -186,6 +195,8 @@ function formatFullRatings(ratings) {
 
         lines.push(`${getFullLabel(r.source)} - ${stripScale(r.value, r.source)}`);
     }
+
+    lines.push(...buildWarningLines(ratings));
 
     return wrapWithDivider(lines.join('\n'));
 }
@@ -217,8 +228,8 @@ async function streamHandler({ type, id }) {
 
     const description = formatRatingsCard(ratings, type);
 
-    logger.info(`Resolved ratings payload for ${id}: ${JSON.stringify(ratings)}`);
-    logger.info(`Resolved description for ${id}: ${JSON.stringify(description)}`);
+    logger.debug(`Resolved ratings payload for ${id}: ${JSON.stringify(ratings)}`);
+    logger.debug(`Resolved description for ${id}: ${JSON.stringify(description)}`);
 
     if (!description || !description.trim()) {
         logger.warn(`Description came out empty for ${id}`);

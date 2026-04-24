@@ -9,6 +9,9 @@ const {
     imdbLabel,
     tmdbLabel,
     isDisplayableRatingValue,
+    processSingleRating,
+    flattenResults,
+    sourceMatchesEnabled,
 } = require('./ratingHelpers');
 const {
     deriveMdblistSafetyResults,
@@ -223,6 +226,13 @@ async function resolveFallbackAggregateRatings(type, rawId, streamInfo, tmdbId) 
     );
 }
 
+function hasEnabledAggregateResults(results, type) {
+    return flattenResults(results).some(item => {
+        const processed = processSingleRating(item, type);
+        return processed && sourceMatchesEnabled(processed.source, config.ratings.enabled);
+    });
+}
+
 async function getRatings(type, rawId) {
     const ctx = parseMediaContext(type, rawId);
     if (!ctx) return null;
@@ -278,55 +288,40 @@ async function getRatings(type, rawId) {
     const imdbPromise = resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId);
     const tmdbPromise = resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId);
 
-    let primaryAggregatePromise;
-    let fallbackAggregatePromise;
-
-    if (ctx.isEpisode) {
-        primaryAggregatePromise = resolvePrimaryAggregateRatings(
-            type,
-            showRawId,
-            showStreamInfo,
-            tmdbId
-        );
-        fallbackAggregatePromise = resolveFallbackAggregateRatings(
-            type,
-            showRawId,
-            showStreamInfo,
-            tmdbId
-        );
-    } else {
-        primaryAggregatePromise = resolvePrimaryAggregateRatings(
-            type,
-            rawId,
-            streamInfo,
-            tmdbId
-        );
-        fallbackAggregatePromise = resolveFallbackAggregateRatings(
-            type,
-            rawId,
-            streamInfo,
-            tmdbId
-        );
-    }
+    const aggregateRawId = ctx.isEpisode ? showRawId : rawId;
+    const aggregateStreamInfo = ctx.isEpisode ? showStreamInfo : streamInfo;
+    const primaryAggregatePromise = resolvePrimaryAggregateRatings(
+        type,
+        aggregateRawId,
+        aggregateStreamInfo,
+        tmdbId
+    );
 
     const [
         imdbResults,
         tmdbResults,
         primaryAggregateResults,
-        fallbackAggregateResults,
     ] = await Promise.all([
         imdbPromise,
         tmdbPromise,
         primaryAggregatePromise,
-        fallbackAggregatePromise,
     ]);
 
     const mdblistResults = Array.isArray(primaryAggregateResults)
         ? primaryAggregateResults
         : [];
-    const metaResults = mdblistResults.length > 0
+    const hasMdblistRatings = hasEnabledAggregateResults(mdblistResults, type);
+    const fallbackAggregateResults = hasMdblistRatings
         ? []
-        : (Array.isArray(fallbackAggregateResults) ? fallbackAggregateResults : []);
+        : await resolveFallbackAggregateRatings(
+            type,
+            aggregateRawId,
+            aggregateStreamInfo,
+            tmdbId
+        );
+    const metaResults = Array.isArray(fallbackAggregateResults)
+        ? fallbackAggregateResults
+        : [];
 
     const mdblistDerivedResults = deriveMdblistSafetyResults(mdblistResults);
 
@@ -351,7 +346,7 @@ async function getRatings(type, rawId) {
     });
 
     logger.info(`Resolved ${finalRatings.length} unique ratings for ${rawId}`);
-    logger.info(`[Ratings] Final ratings: ${JSON.stringify(finalRatings)}`);
+    logger.debug(`[Ratings] Final ratings: ${JSON.stringify(finalRatings)}`);
 
     if (redisClient.isReady()) {
         try {

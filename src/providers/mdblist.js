@@ -206,7 +206,7 @@ async function fetchByTmdb(type, tmdbId) {
         return null;
     }
 
-    logger.info(`[MDBList] Raw payload: ${JSON.stringify(res.data).slice(0, 4000)}`);
+    logger.debug(`[MDBList] Raw payload: ${JSON.stringify(res.data).slice(0, 4000)}`);
     const ratings = extractRatings(res.data);
 
     // attach raw payload for downstream use
@@ -242,7 +242,7 @@ async function fetchByImdb(type, imdbId) {
         return null;
     }
 
-    logger.info(`[MDBList] Raw payload: ${JSON.stringify(res.data).slice(0, 4000)}`);
+    logger.debug(`[MDBList] Raw payload: ${JSON.stringify(res.data).slice(0, 4000)}`);
     const ratings = extractRatings(res.data);
 
     // attach raw payload for downstream use
