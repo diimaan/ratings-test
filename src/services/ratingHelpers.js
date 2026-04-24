@@ -154,6 +154,44 @@ function pickFirstValidFromArray(items, family, type) {
     return null;
 }
 
+function preferredLabelsForFamily(family, type) {
+    if (family === 'IMDb') {
+        return type === 'movie'
+            ? ['IMDb (Movie)']
+            : ['IMDb (Episode)', 'IMDb (Show)'];
+    }
+
+    if (family === 'TMDb') {
+        return type === 'movie'
+            ? ['TMDb (Movie)']
+            : ['TMDb (Episode)', 'TMDb (Show)'];
+    }
+
+    return [];
+}
+
+function pickPreferredValidFromArray(items, family, type) {
+    if (!Array.isArray(items)) return null;
+
+    const preferredLabels = preferredLabelsForFamily(family, type);
+    if (!preferredLabels.length) {
+        return pickFirstValidFromArray(items, family, type);
+    }
+
+    const processedItems = items
+        .map(item => processSingleRating(item, type))
+        .filter(item => item && sourceFamily(item.source) === family);
+
+    for (const label of preferredLabels) {
+        const match = processedItems.find(item => item.source === label);
+        if (match) {
+            return match;
+        }
+    }
+
+    return processedItems[0] || null;
+}
+
 function findMdblistRawPayload(mdblistResults) {
     if (!Array.isArray(mdblistResults)) return null;
     const rawEntry = mdblistResults.find(item => item && item._raw && typeof item._raw === 'object');
@@ -168,7 +206,7 @@ function flattenResults(results) {
 
 function selectFamilyResult(family, candidates, type) {
     for (const candidate of candidates) {
-        const picked = pickFirstValidFromArray(candidate, family, type);
+        const picked = pickPreferredValidFromArray(candidate, family, type);
         if (picked) return picked;
     }
     return null;
@@ -184,6 +222,7 @@ module.exports = {
     sourceMatchesEnabled,
     orderIndexForSource,
     pickFirstValidFromArray,
+    pickPreferredValidFromArray,
     findMdblistRawPayload,
     flattenResults,
     selectFamilyResult,

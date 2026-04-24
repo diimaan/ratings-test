@@ -25,15 +25,15 @@ const NO_RATINGS_MARKER = '___NO_RATINGS___';
 
 // Provider strategy:
 // - Native IMDb / TMDb stay authoritative for their own families.
-// - PublicMetaDB is a selective secondary source for cross-provider ratings.
-// - MDBList is the main aggregation layer and also drives derived safety metadata.
+// - MDBList is the primary aggregation layer and drives derived safety metadata.
+// - PublicMetaDB is a fallback aggregation layer when MDBList is unavailable or empty.
 // - Jikan is kept as the anime/MAL recovery path.
-const secondaryAggregateProviders = [
-    providers.publicMetaDbProvider,
-].filter(Boolean);
-
 const primaryAggregateProviders = [
     providers.mdblistProvider,
+].filter(Boolean);
+
+const fallbackAggregateProviders = [
+    providers.publicMetaDbProvider,
 ].filter(Boolean);
 
 function calculateTTL(releaseDate, numRatings) {
@@ -193,8 +193,8 @@ async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
     return results;
 }
 
-async function resolveMetaRatings(type, rawId, streamInfo, tmdbId) {
-    const callableProviders = secondaryAggregateProviders.filter(Boolean);
+async function resolvePrimaryAggregateRatings(type, rawId, streamInfo, tmdbId) {
+    const callableProviders = primaryAggregateProviders.filter(Boolean);
 
     if (!callableProviders.length) return [];
 
@@ -208,8 +208,8 @@ async function resolveMetaRatings(type, rawId, streamInfo, tmdbId) {
     );
 }
 
-async function resolveMdblistFallbackRatings(type, rawId, streamInfo, tmdbId) {
-    const callableProviders = primaryAggregateProviders.filter(Boolean);
+async function resolveFallbackAggregateRatings(type, rawId, streamInfo, tmdbId) {
+    const callableProviders = fallbackAggregateProviders.filter(Boolean);
 
     if (!callableProviders.length) return [];
 
@@ -278,28 +278,55 @@ async function getRatings(type, rawId) {
     const imdbPromise = resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId);
     const tmdbPromise = resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId);
 
-    let metaPromise;
-    let mdblistPromise;
+    let primaryAggregatePromise;
+    let fallbackAggregatePromise;
 
     if (ctx.isEpisode) {
-        metaPromise = resolveMetaRatings(type, showRawId, showStreamInfo, tmdbId);
-        mdblistPromise = resolveMdblistFallbackRatings(type, showRawId, showStreamInfo, tmdbId);
+        primaryAggregatePromise = resolvePrimaryAggregateRatings(
+            type,
+            showRawId,
+            showStreamInfo,
+            tmdbId
+        );
+        fallbackAggregatePromise = resolveFallbackAggregateRatings(
+            type,
+            showRawId,
+            showStreamInfo,
+            tmdbId
+        );
     } else {
-        metaPromise = resolveMetaRatings(type, rawId, streamInfo, tmdbId);
-        mdblistPromise = resolveMdblistFallbackRatings(type, rawId, streamInfo, tmdbId);
+        primaryAggregatePromise = resolvePrimaryAggregateRatings(
+            type,
+            rawId,
+            streamInfo,
+            tmdbId
+        );
+        fallbackAggregatePromise = resolveFallbackAggregateRatings(
+            type,
+            rawId,
+            streamInfo,
+            tmdbId
+        );
     }
 
     const [
         imdbResults,
         tmdbResults,
-        metaResults,
-        mdblistResults,
+        primaryAggregateResults,
+        fallbackAggregateResults,
     ] = await Promise.all([
         imdbPromise,
         tmdbPromise,
-        metaPromise,
-        mdblistPromise,
+        primaryAggregatePromise,
+        fallbackAggregatePromise,
     ]);
+
+    const mdblistResults = Array.isArray(primaryAggregateResults)
+        ? primaryAggregateResults
+        : [];
+    const metaResults = mdblistResults.length > 0
+        ? []
+        : (Array.isArray(fallbackAggregateResults) ? fallbackAggregateResults : []);
 
     const mdblistDerivedResults = deriveMdblistSafetyResults(mdblistResults);
 
