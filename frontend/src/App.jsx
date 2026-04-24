@@ -117,18 +117,18 @@ function App() {
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           <RatingCard
             title="Multi-Source Ratings"
-            description="Aggregate scores from IMDb, TMDb, Metacritic & more"
+            description="Native IMDb and TMDb ratings, plus broader cross-source coverage through MDBList."
             icon="📊"
           />
           <RatingCard
-            title="Parental Guidance"
-            description="Age ratings & content warnings from Common Sense Media"
+            title="Safety Signals"
+            description="Age guidance and key warnings derived from the aggregation layer when available."
             icon="👪"
           />
           <RatingCard
-            title="Content Insights"
-            description="Detailed content analysis from CringeMDB"
-            icon="🔍"
+            title="Configurable Output"
+            description="Compact or full display with user-controlled rating selection and ordering."
+            icon="⚙️"
           />
         </section>
 
