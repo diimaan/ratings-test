@@ -8,10 +8,12 @@ const {
 } = require('./defaults');
 const {
     buildUserConfigFromEnv,
+    parseBoolean,
     parsePositiveInt,
 } = require('./userConfig');
 
 const userConfig = buildUserConfigFromEnv(process.env);
+const defaultConfigEnabled = parseBoolean(process.env.ENABLE_DEFAULT_CONFIG, false);
 const requestTimeoutMs = parsePositiveInt(
     process.env.HTTP_TIMEOUT_MS || process.env.PROVIDER_TIMEOUT,
     DEFAULT_HTTP_TIMEOUT_MS
@@ -20,6 +22,7 @@ const requestTimeoutMs = parsePositiveInt(
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
+    defaultConfigEnabled,
     http: {
         requestTimeoutMs,
     },
@@ -60,8 +63,12 @@ const config = {
 let hasFatalError = false;
 let hasWarning = false;
 
-if (!config.tmdb.apiKey) {
-    console.error('FATAL ERROR: TMDB_API_KEY is not set.');
+if (!config.defaultConfigEnabled) {
+    console.info('ENABLE_DEFAULT_CONFIG is off. Legacy /manifest.json streams will require a UUID config.');
+}
+
+if (config.defaultConfigEnabled && !config.tmdb.apiKey) {
+    console.error('FATAL ERROR: TMDB_API_KEY is required when ENABLE_DEFAULT_CONFIG is true.');
     hasFatalError = true;
 }
 
@@ -80,12 +87,12 @@ if (!process.env.CONFIG_ENCRYPTION_SECRET) {
     }
 }
 
-if (!config.mdblist.apiKey) {
+if (config.defaultConfigEnabled && !config.mdblist.apiKey) {
     console.warn('WARNING: MDBLIST_API_KEY is not set. MDBList-dependent ratings will be skipped.');
     hasWarning = true;
 }
 
-if (!config.publicmetadb.apiKey) {
+if (config.defaultConfigEnabled && !config.publicmetadb.apiKey) {
     console.warn('WARNING: PUBLICMETADB_API_KEY is not set. PublicMetaDB ratings will be skipped.');
     hasWarning = true;
 }

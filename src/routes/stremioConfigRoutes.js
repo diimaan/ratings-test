@@ -52,13 +52,15 @@ router.options('/stremio/:configId/stream/:type/:id.json', (_req, res) => {
     sendAddonJson(res, {});
 });
 
-function buildManifest(userConfig) {
+function buildManifest(userConfig, options = {}) {
+    const configurationRequired = options.configurationRequired ?? false;
+
     return {
         ...config.addon,
         behaviorHints: {
             ...config.addon.behaviorHints,
             configurable: true,
-            configurationRequired: false,
+            configurationRequired,
         },
         id: userConfig.id === 'default'
             ? config.addon.id
@@ -70,6 +72,12 @@ router.get('/stremio/:configId/manifest.json', asyncRoute(async (req, res) => {
     const userConfig = await resolveUserConfig(req, res);
     if (!userConfig) return;
 
+    if (userConfig.id === 'default' && !config.defaultConfigEnabled) {
+        logger.info('Serving configuration-required manifest for disabled default config');
+        sendAddonJson(res, buildManifest(userConfig, { configurationRequired: true }));
+        return;
+    }
+
     logger.info(`Serving config-scoped manifest for config=${userConfig.id}`);
     sendAddonJson(res, buildManifest(userConfig));
 }));
@@ -77,6 +85,12 @@ router.get('/stremio/:configId/manifest.json', asyncRoute(async (req, res) => {
 router.get('/stremio/:configId/stream/:type/:id.json', asyncRoute(async (req, res) => {
     const userConfig = await resolveUserConfig(req, res);
     if (!userConfig) return;
+
+    if (userConfig.id === 'default' && !config.defaultConfigEnabled) {
+        logger.info('Default config stream requested while ENABLE_DEFAULT_CONFIG is off');
+        sendAddonJson(res, { streams: [] });
+        return;
+    }
 
     const payload = await streamHandler({
         type: req.params.type,
@@ -97,10 +111,18 @@ router.get('/stremio/:configId/configure', (req, res) => {
 
 router.get('/manifest.json', asyncRoute(async (_req, res) => {
     const userConfig = await userConfigService.getDefaultUserConfig();
-    sendAddonJson(res, buildManifest(userConfig));
+    sendAddonJson(res, buildManifest(userConfig, {
+        configurationRequired: !config.defaultConfigEnabled,
+    }));
 }));
 
 router.get('/stream/:type/:id.json', asyncRoute(async (req, res) => {
+    if (!config.defaultConfigEnabled) {
+        logger.info('Legacy default stream requested while ENABLE_DEFAULT_CONFIG is off');
+        sendAddonJson(res, { streams: [] });
+        return;
+    }
+
     const userConfig = await userConfigService.getDefaultUserConfig();
     const payload = await streamHandler({
         type: req.params.type,

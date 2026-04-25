@@ -17,6 +17,17 @@ function parsePositiveInt(value, fallback) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseBoolean(value, fallback = false) {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value === 'boolean') return value;
+
+    const normalized = String(value).trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+
+    return fallback;
+}
+
 function normalizeDisplayMode(value, fallback = 'full') {
     const normalized = String(value || fallback).trim().toLowerCase();
     return ['compact', 'full'].includes(normalized) ? normalized : fallback;
@@ -156,6 +167,7 @@ module.exports = {
     buildUserConfigFromEnv,
     buildUserConfigFromInput,
     buildCacheFingerprint,
+    parseBoolean,
     normalizeDisplayMode,
     parseCsv,
     parsePositiveInt,

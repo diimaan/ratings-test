@@ -39,7 +39,7 @@ function uniqueOrderedRatings(defaults) {
   return [...new Set([...order, ...enabled, ...fallbackRatings])];
 }
 
-export function ConfigBuilder({ defaultManifestPath = '/stremio/default/manifest.json' }) {
+export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   const [providers, setProviders] = useState(providerDefaults);
   const [displayMode, setDisplayMode] = useState('compact');
   const [compactLimit, setCompactLimit] = useState(4);

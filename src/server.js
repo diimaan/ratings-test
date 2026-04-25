@@ -100,7 +100,7 @@ async function startServer() {
         const url = `http://localhost:${port}`;
         logger.info(`Addon server listening on ${url}`);
         logger.info(`Access the addon manifest at ${url}/manifest.json`);
-        logger.info(`Access the config-scoped manifest at ${url}/stremio/default/manifest.json`);
+        logger.info(`Create or retrieve UUID configs at ${url}/configure`);
     });
 }
 
