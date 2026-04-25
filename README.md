@@ -22,7 +22,7 @@ Implemented:
 - Stable manifest routes such as `/stremio/<uuid>/manifest.json`
 - Server-side storage of user provider keys
 - At-rest encryption of saved provider keys with `CONFIG_ENCRYPTION_SECRET`
-- Configuration-required base manifest for public BYO-key hosting
+- Configuration-required base manifest for BYOB hosting
 - Compact and full display modes
 - Rating enable/disable and ordering controls
 - SQLite config storage
@@ -66,7 +66,6 @@ Important values:
 TMDB_API_KEY="..."
 MDBLIST_API_KEY="..."
 PUBLICMETADB_API_KEY=""
-ENABLE_DEFAULT_CONFIG=false
 REDIS_URL="redis://ratings-redis:6379"
 SQLITE_DB_PATH="/app/data/app/ratings.sqlite"
 LMDB_DATA_DIR="/app/data/lmdb"
@@ -77,7 +76,7 @@ IMDB_DATA_DIR="/app/data/imdb"
 
 `CONFIG_ENCRYPTION_SECRET` must remain stable. If it changes, existing encrypted provider keys cannot be decrypted.
 
-`ENABLE_DEFAULT_CONFIG=false` is the recommended public-addon mode. In that mode, the base `/manifest.json` exists only to send users through configuration, and stream results require a saved UUID config. Set it to `true` only for a private/self-hosted shared-default instance where using server-level provider keys is intentional.
+This addon runs in BYOB mode. The base `/manifest.json` exists only to send users through configuration, and stream results require a saved UUID config.
 
 ## Local Docker Desktop
 
@@ -146,6 +145,6 @@ docker compose --env-file .env -f compose.local.yaml config --quiet
 - Provider keys are encrypted at rest using `CONFIG_ENCRYPTION_SECRET`
 - UUID alone can install and use a config
 - UUID + password is required to retrieve, update, export, or delete a config
-- Public deployments should keep `ENABLE_DEFAULT_CONFIG=false` so users bring their own provider keys
+- Working streams require a UUID config with user-supplied provider keys
 - Redis is not used as the primary IMDb dataset store
 - Public hosting should keep config routes rate-limited and proxied behind HTTPS

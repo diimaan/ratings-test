@@ -8,12 +8,10 @@ const {
 } = require('./defaults');
 const {
     buildUserConfigFromEnv,
-    parseBoolean,
     parsePositiveInt,
 } = require('./userConfig');
 
 const userConfig = buildUserConfigFromEnv(process.env);
-const defaultConfigEnabled = parseBoolean(process.env.ENABLE_DEFAULT_CONFIG, false);
 const requestTimeoutMs = parsePositiveInt(
     process.env.HTTP_TIMEOUT_MS || process.env.PROVIDER_TIMEOUT,
     DEFAULT_HTTP_TIMEOUT_MS
@@ -22,7 +20,6 @@ const requestTimeoutMs = parsePositiveInt(
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
-    defaultConfigEnabled,
     http: {
         requestTimeoutMs,
     },
@@ -63,14 +60,7 @@ const config = {
 let hasFatalError = false;
 let hasWarning = false;
 
-if (!config.defaultConfigEnabled) {
-    console.info('ENABLE_DEFAULT_CONFIG is off. Legacy /manifest.json streams will require a UUID config.');
-}
-
-if (config.defaultConfigEnabled && !config.tmdb.apiKey) {
-    console.error('FATAL ERROR: TMDB_API_KEY is required when ENABLE_DEFAULT_CONFIG is true.');
-    hasFatalError = true;
-}
+console.info('BYOB mode enabled. Stream routes require a saved UUID config.');
 
 if (!process.env.REDIS_URL) {
     console.warn('WARNING: REDIS_URL is not set. Caching will use default redis://localhost:6379.');
@@ -85,16 +75,6 @@ if (!process.env.CONFIG_ENCRYPTION_SECRET) {
         console.warn('WARNING: CONFIG_ENCRYPTION_SECRET is not set. Saved user provider keys will not be encrypted at rest.');
         hasWarning = true;
     }
-}
-
-if (config.defaultConfigEnabled && !config.mdblist.apiKey) {
-    console.warn('WARNING: MDBLIST_API_KEY is not set. MDBList-dependent ratings will be skipped.');
-    hasWarning = true;
-}
-
-if (config.defaultConfigEnabled && !config.publicmetadb.apiKey) {
-    console.warn('WARNING: PUBLICMETADB_API_KEY is not set. PublicMetaDB ratings will be skipped.');
-    hasWarning = true;
 }
 
 if (hasFatalError) {

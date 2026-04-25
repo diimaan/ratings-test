@@ -14,7 +14,6 @@ services:
       PORT: ${PORT:-61262}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS:-12000}
-      ENABLE_DEFAULT_CONFIG: ${ENABLE_DEFAULT_CONFIG:-false}
       TMDB_API_KEY: ${TMDB_API_KEY}
       TMDB_API_URL: ${TMDB_API_URL:-https://api.themoviedb.org/3}
       MDBLIST_API_KEY: ${MDBLIST_API_KEY}
