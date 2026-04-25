@@ -32,12 +32,23 @@ async function resolveUserConfig(req, res) {
     return userConfig;
 }
 
-router.use('/stremio/:configId', (_req, res, next) => {
+function setAddonCors(_req, res, next) {
     res.set({
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': 'GET,OPTIONS',
     });
     next();
+}
+
+router.use(setAddonCors);
+
+router.options('/manifest.json', (_req, res) => {
+    sendAddonJson(res, {});
+});
+
+router.options('/stream/:type/:id.json', (_req, res) => {
+    sendAddonJson(res, {});
 });
 
 router.options('/stremio/:configId', (_req, res) => {
