@@ -42,3 +42,64 @@ The local setup avoids those production assumptions and instead uses:
 - `IMDB_DATASET_MODE=required` is appropriate on the VPS once the IMDb dataset files are mounted
 - `IMDB_DATASET_MODE=optional` is useful for local development without the large IMDb dataset files
 - Traefik should be the only public entrypoint for the app
+
+## IMDb dataset ingestion on VPS
+
+The expected VPS paths are:
+
+```text
+/opt/docker/compose/ratings
+/opt/docker/data/ratings/imdb
+/opt/docker/data/ratings/lmdb
+```
+
+Before the first required-mode start, create the persistent directories:
+
+```bash
+sudo mkdir -p /opt/docker/data/ratings/imdb
+sudo mkdir -p /opt/docker/data/ratings/lmdb
+sudo mkdir -p /opt/docker/data/ratings/app
+sudo mkdir -p /opt/docker/data/ratings/redis
+```
+
+Confirm `.env` contains:
+
+```env
+IMDB_DATASET_MODE=required
+IMDB_DATA_DIR="/app/data/imdb"
+LMDB_DATA_DIR="/app/data/lmdb"
+RATINGS_IMDB_DATA_DIR=/opt/docker/data/ratings/imdb
+RATINGS_LMDB_DATA_DIR=/opt/docker/data/ratings/lmdb
+```
+
+Run the dataset update helper from the compose directory:
+
+```bash
+cd /opt/docker/compose/ratings
+sudo ./update_imdb_dataset.sh
+```
+
+The helper:
+
+- downloads `title.ratings.tsv.gz` and `title.episode.tsv.gz`
+- validates both gzip files before replacing existing files
+- restarts the ratings container only when either dataset file changed
+- waits for the container healthcheck
+- prints recent IMDb/LMDB ingestion logs
+
+Manual verification commands:
+
+```bash
+ls -lh /opt/docker/data/ratings/imdb
+docker compose --env-file .env -f compose.yaml ps
+docker compose --env-file .env -f compose.yaml logs --tail=120 ratings-aggregator | grep -E "IMDb LMDB|Dataset"
+docker compose --env-file .env -f compose.yaml exec -T ratings-aggregator curl -sS http://localhost:${PORT:-61262}/health
+```
+
+Expected successful logs include:
+
+```text
+[IMDb LMDB] Ratings DONE: ...
+[IMDb LMDB] Episode mappings DONE: ...
+[IMDb LMDB] Dataset initialization COMPLETE: ... ratings, ... episode mappings
+```
