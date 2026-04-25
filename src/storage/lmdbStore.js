@@ -25,6 +25,22 @@ function getNamedDb(name) {
     });
 }
 
+function health() {
+    try {
+        getRootDb();
+        return {
+            ok: true,
+            path: config.storage.lmdbPath,
+        };
+    } catch (err) {
+        return {
+            ok: false,
+            path: config.storage.lmdbPath,
+            error: err.message,
+        };
+    }
+}
+
 function close() {
     if (!rootDb) return;
     rootDb.close();
@@ -33,5 +49,6 @@ function close() {
 
 module.exports = {
     getNamedDb,
+    health,
     close,
 };

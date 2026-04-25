@@ -80,9 +80,17 @@ async function startServer() {
     });
 
     app.get('/health', (_req, res) => {
+        const sqlite = sqliteStore.health();
+        const lmdb = lmdbStore.health();
+        const storageOk = sqlite.ok && lmdb.ok;
+
         res.json({
-            status: 'ok',
+            status: storageOk ? 'ok' : 'degraded',
             redis: redisClient.isReady(),
+            storage: {
+                sqlite,
+                lmdb,
+            },
             uptime: process.uptime(),
         });
     });

@@ -112,6 +112,22 @@ function setUserConfigPasswordHash(id, passwordHash) {
         .changes > 0;
 }
 
+function health() {
+    try {
+        getDb().prepare('SELECT 1').get();
+        return {
+            ok: true,
+            path: config.storage.sqlitePath,
+        };
+    } catch (err) {
+        return {
+            ok: false,
+            path: config.storage.sqlitePath,
+            error: err.message,
+        };
+    }
+}
+
 function close() {
     if (!db) return;
     db.close();
@@ -124,5 +140,6 @@ module.exports = {
     saveUserConfig,
     deleteUserConfig,
     setUserConfigPasswordHash,
+    health,
     close,
 };
