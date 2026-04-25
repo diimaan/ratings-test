@@ -4,10 +4,13 @@ const express = require('express');
 const path = require('path');
 const logger = require('./utils/logger');
 const config = require('./config');
-const addonInterface = require('./addon');
-const { getRouter } = require('stremio-addon-sdk');
 const redisClient = require('./cache/redisClient');
-const imdbDataset = require('./utils/imdbRedisDataset');
+const imdbDataset = require('./utils/imdbLmdbDataset');
+const stremioConfigRoutes = require('./routes/stremioConfigRoutes');
+const configApiRoutes = require('./routes/configApiRoutes');
+const sqliteStore = require('./storage/sqliteStore');
+const lmdbStore = require('./storage/lmdbStore');
+const jsonErrorHandler = require('./middleware/jsonErrorHandler');
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -46,15 +49,9 @@ async function startServer() {
     // =========================
     // IMDb Dataset Init
     // =========================
-    // Fast boot with a small readiness wait so Redis is actually usable
     (async () => {
         try {
-            const ready = await waitForRedisReady(20, 500);
-            if (!ready) {
-                logger.warn('Skipping IMDb dataset initialization because Redis is not ready.');
-                return;
-            }
-
+            await waitForRedisReady(20, 500);
             await imdbDataset.init();
             logger.info('IMDb dataset initialization task completed.');
         } catch (err) {
@@ -66,6 +63,8 @@ async function startServer() {
     // Express App Setup
     // =========================
     const app = express();
+    app.set('trust proxy', true);
+    app.use(express.json({ limit: '64kb' }));
 
     // Serve any static files you place in ./public
     const distPath = path.join(__dirname, '../frontend/dist');
@@ -88,9 +87,12 @@ async function startServer() {
         });
     });
 
-    // Mount the Stremio addon (manifest.json, API, etc.)
-    app.use(getRouter(addonInterface));
-    logger.info('Addon router mounted.');
+    app.use(configApiRoutes);
+    logger.info('Config API routes mounted.');
+
+    app.use(stremioConfigRoutes);
+    logger.info('Config-scoped Stremio routes mounted.');
+    app.use(jsonErrorHandler);
 
     // Start HTTP server
     const port = config.port;
@@ -98,6 +100,7 @@ async function startServer() {
         const url = `http://localhost:${port}`;
         logger.info(`Addon server listening on ${url}`);
         logger.info(`Access the addon manifest at ${url}/manifest.json`);
+        logger.info(`Access the config-scoped manifest at ${url}/stremio/default/manifest.json`);
     });
 }
 
@@ -105,6 +108,8 @@ async function startServer() {
 async function shutdown(signal) {
     logger.warn(`Received ${signal}. Shutting down...`);
     await redisClient.disconnect();
+    sqliteStore.close();
+    lmdbStore.close();
     logger.info('Shutdown complete.');
     process.exit(0);
 }

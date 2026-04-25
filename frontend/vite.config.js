@@ -5,20 +5,12 @@ import path from 'path'
 import { version } from './package.json';
 
 export default defineConfig(({ mode }) => {
-  // Load env variables
-  const env = {
-    ...loadEnv(mode, process.cwd(), ""),
-    };
-    const processEnvValues = {
-    "process.env": Object.entries(env).reduce((prev, [key, val]) => {
-      console.log(key, val);
-      return {
-        ...prev,
-        [key]: val,
-      };
-    }, {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const processEnvValues = {
+    "process.env": {
       VERSION: version,
-    }),
+      VITE_HOME_BLURB: env.VITE_HOME_BLURB || '',
+    },
   };
 
   return {

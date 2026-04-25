@@ -1,11 +1,8 @@
 import { motion } from 'framer-motion';
-import { FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
-import { toast } from 'react-toastify';
-import { SiStremio } from "react-icons/si";
 import { useEffect } from 'react';
 import RatingCard from './components/RatingCard';
-import showCase from './assets/showcase.png';
 import { AddonManagerCard } from './components/AddonManagerCard';
+import { ConfigBuilder } from './components/ConfigBuilder';
 import { initGTM } from './utils/gtm';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -28,33 +25,13 @@ const SponsorBanner = ({ html }) => {
 
 
 function App() {
-  const manifestUrl = `/manifest.json`;
   const sponsorHTML = process.env.VITE_HOME_BLURB;
   const addonVersion = process.env.VERSION || '0.0.0';
 
   useEffect(() => {
     initGTM();
-    window.dataLayer.push({ event: 'pageview', page: window.location.pathname });
+    window.dataLayer?.push({ event: 'pageview', page: window.location.pathname });
   }, []);
-
-  const handleCopy = () => {
-    const absoluteUrl = new URL(manifestUrl, window.location.origin).href;
-    navigator.clipboard.writeText(absoluteUrl)
-      .then(() => toast.success('Manifest URL copied!'))
-      .catch(() => toast.error('Failed to copy URL'));
-  };
-
-  const handleStremioWeb = () => {
-    const url = new URL(manifestUrl, window.location.origin).href;
-    window.open(`https://web.stremio.com/#/addons?addon=${encodeURIComponent(url)}`, '_blank');
-  };
-
-  const handleStremioApp = () => {
-    const absoluteManifestUrl = new URL(manifestUrl, window.location.origin).href;
-    const deepLink = absoluteManifestUrl.replace(/^https?:\/\//i, 'stremio://');
-    window.location.href = deepLink;
-  };
-  
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 bg-[#0f172a] text-white">
@@ -84,37 +61,9 @@ function App() {
 
         </header>
 
-        <motion.div
-          className="flex flex-col sm:flex-row justify-center gap-4 mb-16"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-        >
-          <button onClick={handleCopy} className="button-gradient px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
-            <FaCopy /> Copy URL
-          </button>
-          <button onClick={handleStremioWeb} className="button-gradient px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
-            <FaExternalLinkAlt /> Stremio Web
-          </button>
-          <button onClick={handleStremioApp} className="button-gradient px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-semibold">
-            <SiStremio /> Open Stremio
-          </button>
-        </motion.div>
+        <ConfigBuilder />
 
-        <motion.div
-          className="mb-16 flex justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <img
-            src={showCase}
-            alt="Showcase"
-            className="w-full max-w-sm h-auto rounded-lg shadow-lg"
-          />
-        </motion.div>
-
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 my-16">
           <RatingCard
             title="Multi-Source Ratings"
             description="Native IMDb and TMDb ratings, plus broader cross-source coverage through MDBList."

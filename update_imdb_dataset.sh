@@ -16,7 +16,6 @@ TMP_RATINGS_FILE="${TMP_DIR}/title.ratings.tsv.gz"
 TMP_EPISODES_FILE="${TMP_DIR}/title.episode.tsv.gz"
 
 CONTAINER_APP="ratings-aggregator"
-CONTAINER_REDIS="ratings-redis"
 
 mkdir -p "${DATA_DIR}" "${TMP_DIR}"
 touch "${LOG_FILE}"
@@ -45,20 +44,6 @@ file_changed() {
   fi
 
   return 1
-}
-
-clear_imdb_dataset_keys() {
-  log "Clearing Redis IMDb dataset keys..."
-
-  sudo docker exec -i "${CONTAINER_REDIS}" sh -c \
-    "redis-cli --scan --pattern 'rating:*' | xargs -r redis-cli DEL >/dev/null"
-
-  sudo docker exec -i "${CONTAINER_REDIS}" sh -c \
-    "redis-cli --scan --pattern 'ep:*' | xargs -r redis-cli DEL >/dev/null"
-
-  sudo docker exec -i "${CONTAINER_REDIS}" redis-cli DEL imdb:loaded >/dev/null
-
-  log "Redis IMDb dataset keys cleared."
 }
 
 restart_ratings_container() {
@@ -101,7 +86,7 @@ main() {
 
   if [[ "${changed}" -eq 1 ]]; then
     log "Dataset changes detected."
-    clear_imdb_dataset_keys
+    log "LMDB IMDb lookup data will refresh on ratings container restart."
     restart_ratings_container
     log "Dataset refresh completed."
   else

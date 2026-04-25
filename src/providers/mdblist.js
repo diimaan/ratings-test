@@ -4,9 +4,6 @@ const logger = require('../utils/logger');
 
 logger.info('[MDBList] Provider module loaded');
 
-const API_KEY = config.mdblist?.apiKey;
-const API_URL = config.mdblist?.apiUrl || 'https://api.mdblist.com';
-
 function endpointType(type) {
     return type === 'series' ? 'show' : 'movie';
 }
@@ -116,6 +113,71 @@ function extractPreferredMdbScore(data) {
     };
 }
 
+function normalizeKeywordName(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase();
+}
+
+function extractKeywordNames(data) {
+    if (!Array.isArray(data?.keywords)) return [];
+
+    return [...new Set(
+        data.keywords
+            .map(item => normalizeKeywordName(item?.name ?? item?.title ?? item))
+            .filter(Boolean)
+    )];
+}
+
+function extractGenreNames(data) {
+    if (!Array.isArray(data?.genres)) return [];
+
+    return [...new Set(
+        data.genres
+            .map(item => normalizeKeywordName(item?.name ?? item?.title ?? item))
+            .filter(Boolean)
+    )];
+}
+
+function normalizeNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+function extractStructuredMetadata(data) {
+    if (!data || typeof data !== 'object') return null;
+
+    const malId = data?.ids?.mal ?? data?.mal_id ?? data?.myanimelist_id ?? null;
+    const imdbId = data?.ids?.imdb ?? data?.imdb_id ?? null;
+    const tmdbId = data?.ids?.tmdb ?? data?.tmdb_id ?? null;
+    const language = String(data.language || '').toLowerCase() || null;
+    const genres = extractGenreNames(data);
+    const keywords = extractKeywordNames(data);
+
+    return {
+        _mdblist: {
+            ids: {
+                imdb: imdbId || null,
+                tmdb: tmdbId || null,
+                mal: malId || null,
+            },
+            age: {
+                commonSense: normalizeNumber(data?.commonsense_media?.common_sense),
+                ageRating: normalizeNumber(data?.age_rating),
+                parentalNudity: normalizeNumber(data?.commonsense_media?.parental_nudity),
+            },
+            language,
+            genres,
+            keywords,
+            flags: {
+                hasMalId: Boolean(malId),
+                isJapaneseLanguage: language === 'ja',
+                hasAnimeGenre: genres.some(genre => /anime/i.test(genre)),
+            },
+        },
+    };
+}
+
 function extractRatings(data) {
     const out = [];
     if (!data || typeof data !== 'object') return out;
@@ -182,17 +244,17 @@ function extractRatings(data) {
     return Array.from(deduped.values());
 }
 
-async function fetchByTmdb(type, tmdbId) {
+async function fetchByTmdb(type, tmdbId, providerConfig) {
     logger.info(`[MDBList] Fetching by TMDb: type=${type} tmdbId=${tmdbId}`);
     const mediaType = endpointType(type);
-    const url = `${API_URL}/tmdb/${mediaType}/${tmdbId}`;
+    const url = `${providerConfig.apiUrl}/tmdb/${mediaType}/${tmdbId}`;
 
     logger.debug(`[MDBList] Fetching ${url}`);
 
     const res = await axios.get(url, {
         timeout: config.http.requestTimeoutMs || 12000,
         headers: { 'User-Agent': config.userAgent },
-        params: { apikey: API_KEY },
+        params: { apikey: providerConfig.apiKey },
         validateStatus: status => status >= 200 && status < 500,
     });
 
@@ -209,26 +271,26 @@ async function fetchByTmdb(type, tmdbId) {
     logger.debug(`[MDBList] Raw payload: ${JSON.stringify(res.data).slice(0, 4000)}`);
     const ratings = extractRatings(res.data);
 
-    // attach raw payload for downstream use
-    if (Array.isArray(ratings)) {
-        ratings.push({ _raw: res.data });
+    const metadata = extractStructuredMetadata(res.data);
+    if (metadata) {
+        ratings.push(metadata);
     }
 
     return ratings;
 }
 
-async function fetchByImdb(type, imdbId) {
+async function fetchByImdb(type, imdbId, providerConfig) {
     logger.info(`[MDBList] Fetching by IMDb: type=${type} imdbId=${imdbId}`);
     const baseId = imdbId?.split(':')[0];
     const mediaType = endpointType(type);
-    const url = `${API_URL}/imdb/${mediaType}/${baseId}`;
+    const url = `${providerConfig.apiUrl}/imdb/${mediaType}/${baseId}`;
 
     logger.debug(`[MDBList] Fallback fetching ${url}`);
 
     const res = await axios.get(url, {
         timeout: config.http.requestTimeoutMs || 12000,
         headers: { 'User-Agent': config.userAgent },
-        params: { apikey: API_KEY },
+        params: { apikey: providerConfig.apiKey },
         validateStatus: status => status >= 200 && status < 500,
     });
 
@@ -245,29 +307,31 @@ async function fetchByImdb(type, imdbId) {
     logger.debug(`[MDBList] Raw payload: ${JSON.stringify(res.data).slice(0, 4000)}`);
     const ratings = extractRatings(res.data);
 
-    // attach raw payload for downstream use
-    if (Array.isArray(ratings)) {
-        ratings.push({ _raw: res.data });
+    const metadata = extractStructuredMetadata(res.data);
+    if (metadata) {
+        ratings.push(metadata);
     }
 
     return ratings;
 }
 
-async function getRating(type, imdbId, _streamInfo, tmdbId) {
+async function getRating(type, imdbId, _streamInfo, tmdbId, userConfig = config.userConfig) {
+    const providerConfig = userConfig?.providers?.mdblist || config.mdblist;
+
     logger.info(`[MDBList] getRating called for type=${type} imdbId=${imdbId} tmdbId=${tmdbId}`);
 
-    if (!API_KEY) {
+    if (!providerConfig.apiKey) {
         logger.warn('[MDBList] API key missing. MDBList-backed ratings will not be returned.');
         return null;
     }
 
     try {
         if (tmdbId) {
-            const byTmdb = await fetchByTmdb(type, tmdbId);
+            const byTmdb = await fetchByTmdb(type, tmdbId, providerConfig);
             if (byTmdb?.length) return byTmdb;
         }
 
-        return await fetchByImdb(type, imdbId);
+        return await fetchByImdb(type, imdbId, providerConfig);
     } catch (err) {
         logger.error(`[MDBList] Request error: ${err.message}`);
         return null;

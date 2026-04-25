@@ -5,7 +5,7 @@
 const logger = require('../utils/logger');
 const PROVIDER_NAME = 'Letterboxd';
 
-async function getRating(type, imdbId) {
+async function getRating() {
     logger.debug(`${PROVIDER_NAME}: Provider not implemented.`);
     // Implementation would involve:
     // 1. Finding the Letterboxd URL (often via TMDB/IMDb ID mapping or searching)

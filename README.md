@@ -1,69 +1,146 @@
-# ✨ Stop the Tab-Hopping Madness! Get ALL Your Ratings in Stremio ✨
+# Ratings Aggregator for Stremio
 
-[![Addon Preview - See all ratings in one place!](https://i.postimg.cc/kGG69XG6/Screenshot-From-2025-04-22-00-06-01.png)](https://postimg.cc/ctq4BWQ0)
-**(Click the image to see it in action!)**
+Ratings Aggregator is a self-hostable Stremio addon for showing movie and series ratings in stream results. This fork is being refactored around a cleaner public-addon architecture:
 
-Tired of juggling _IMDb, TMDb,_ and a bunch of scattered rating sources *just* to decide what to watch? Yeah, us too.
+- Native IMDb and TMDb ratings as first-class sources
+- MDBList as the main aggregation and metadata layer
+- Public MetaDB as an experimental fallback when MDBList is unavailable or empty
+- Derived age and warning signals from structured metadata where available
+- UUID-based per-user configuration
+- SQLite for user configs
+- LMDB for local IMDb episode lookup data
+- Redis for hot cache and final result cache
 
-**Meet the Stremio Ratings Aggregator!** This little powerhouse, built *by* the community *for* the community, jams all those crucial ratings into **one handy card** right inside Stremio. 🎬
+## Current Status
 
-**👇 See ratings, decide faster, watch sooner! 👇**
+This repo is still an active refactor, not a polished public release. It is suitable for controlled self-hosting and development testing.
 
----
+Implemented:
 
-# 🤔 What This Branch Focuses On
-This fork is being shaped around native IMDb/TMDb ratings, MDBList-first aggregation, derived safety signals, and cleaner self-hosted deployment.
+- `/configure` UI for creating UUID manifests
+- UUID + password based config retrieval and update
+- Stable manifest routes such as `/stremio/<uuid>/manifest.json`
+- Server-side storage of user provider keys
+- At-rest encryption of saved provider keys with `CONFIG_ENCRYPTION_SECRET`
+- Compact and full display modes
+- Rating enable/disable and ordering controls
+- SQLite config storage
+- Redis result caching
+- LMDB-backed IMDb episode lookup foundation
 
----
+Still planned:
 
-# 🚀 Get Started in Seconds:
+- More UI polish
+- Full IMDb LMDB ingestion test on VPS dataset files
+- Automated tests for provider fallback and rating display behavior
+- More complete production hardening
 
-1.  **Grab the Manifest URL:** Open the configure page on your own deployment and copy the generated manifest URL. ✨
-2.  **Beam it to Stremio:** Open Stremio, navigate to **Addons** → **Community Add-ons** (or might be just "Addons"), find the **Custom**/**Install from URL** option. ⚙️
-3.  **Paste & Activate:** Paste the URL you copied and hit **Install** (or Add/Okay). ✅
-4.  **🎉 BAM! 🎉** Unified ratings are now baked right into your Stremio experience! Enjoy the clarity!
+## Configuration Model
 
----
+Users create a config from `/configure`.
 
-# 🌟 What Makes This Addon Awesome? 🌟
+Each saved config has:
 
-* ⭐ **IMDb:** The classic crowd score.
-* 🎥 **TMDb:** API-powered scores for movies & shows.
-* Ⓜ️ **Metacritic:** Both critic metascores AND user ratings.
-* 👪 **Derived safety signals:** Surface age guidance and key warnings from the aggregation layer when available
-* 🧠 **Aggregated cross-source ratings:** Pull supporting data like MC, RT, PC, Trakt, Letterboxd, Roger Ebert, and MAL where available
-* ⚡ **Super Speedy:** Redis caching means ratings load *fast*. No waiting around!
-* 🛠️ **Built for Tinkering:** Open source Node.js codebase, now being cleaned up for a more maintainable self-hosted workflow.
+- A UUID used in the Stremio manifest URL
+- A password used only for retrieving, updating, exporting, or deleting the config
+- Provider keys stored server-side
 
----
+The manifest URL does not expose API keys or the config password.
 
-# 🚧 Beta Zone & Future Fun 🚧
+Example:
 
-Heads up! This addon is currently in **Beta**. We're actively squashing bugs and adding polish!
+```text
+/stremio/00000000-0000-0000-0000-000000000000/manifest.json
+```
 
-* 📺 **Android TV:** We're tuning the display for the big screen.
-* 🔧 **Self-Hosting:** Docker and Traefik-friendly deployment are active priorities.
-* 🍅 **Provider cleanup:** MDBList is the recommended aggregation layer, with Public MetaDB as an experimental fallback.
+Keep the UUID and password safe. There is intentionally no password recovery flow.
 
-**Our mission:** Stable release, smarter data fetching, and even better error handling based on *your* feedback!
+## Required Environment
 
----
+Copy `.env.example` to `.env` and fill in the values.
 
-# 🙏 Love It? Show Some Love Back! 🙏
+Important values:
 
-If this addon saves you time and hassle, could you do us a *huge* favor?
+```env
+TMDB_API_KEY="..."
+MDBLIST_API_KEY="..."
+PUBLICMETADB_API_KEY=""
+REDIS_URL="redis://ratings-redis:6379"
+SQLITE_DB_PATH="/app/data/app/ratings.sqlite"
+LMDB_DATA_DIR="/app/data/lmdb"
+CONFIG_ENCRYPTION_SECRET="CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+IMDB_DATASET_MODE=required
+IMDB_DATA_DIR="/app/data/imdb"
+```
 
-🌟 **Please Star the Repo on GitHub!** 🌟
-[**➡️ Visit the Repo & Click Star ⭐**](https://github.com/diimaan/ratings-test)
+`CONFIG_ENCRYPTION_SECRET` must remain stable. If it changes, existing encrypted provider keys cannot be decrypted.
 
-Starring helps more people discover the addon, motivates development, and frankly, just makes us feel warm and fuzzy. 😊 It's the easiest way to say "Thanks!"
+## Local Docker Desktop
 
----
+For local testing:
 
-# 🔗 Quick Links:
+```bash
+docker compose --env-file .env -f compose.local.yaml up -d --build
+```
 
-* **Get Manifest URL:** Open `/configure` on your deployment
-* **See the Code / Star Us ⭐:** [GitHub Repo](https://github.com/diimaan/ratings-test)
-* **Report Bugs / Suggest Features:** [Issues & Feedback](https://github.com/diimaan/ratings-test/issues)
+The local compose setup:
 
-**Happy Watching!** 🍿
+- Uses direct port mapping
+- Uses local named volumes
+- Sets `IMDB_DATASET_MODE=optional`
+- Does not require Traefik
+
+Open:
+
+```text
+http://localhost:61262/configure
+```
+
+## VPS Deployment
+
+For VPS deployment, use:
+
+```bash
+docker compose --env-file .env -f compose.yaml up -d --build
+```
+
+The VPS compose setup expects:
+
+- Existing external Docker network, for example `aio_default`
+- Traefik as the public entrypoint
+- Persistent bind mounts for Redis, SQLite, LMDB, and IMDb dataset files
+
+See `DEPLOYMENT_NOTES.md` for operational notes.
+
+## IMDb Dataset
+
+The addon expects these files when `IMDB_DATASET_MODE=required`:
+
+```text
+/app/data/imdb/title.ratings.tsv.gz
+/app/data/imdb/title.episode.tsv.gz
+```
+
+The update helper downloads from IMDb's public dataset endpoint into `/opt/docker/data/ratings/imdb`:
+
+```bash
+sudo ./update_imdb_dataset.sh
+```
+
+When files change, the ratings container restarts and the LMDB lookup store refreshes during startup.
+
+## Development Checks
+
+```bash
+npm run lint -- --max-warnings=0
+npm run build:frontend
+docker compose --env-file .env -f compose.local.yaml config --quiet
+```
+
+## Security Notes
+
+- Provider keys are encrypted at rest using `CONFIG_ENCRYPTION_SECRET`
+- UUID alone can install and use a config
+- UUID + password is required to retrieve, update, export, or delete a config
+- Redis is not used as the primary IMDb dataset store
+- Public hosting should keep config routes rate-limited and proxied behind HTTPS

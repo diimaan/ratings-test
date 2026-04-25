@@ -3,16 +3,6 @@ const config = require('../config');
 const logger = require('../utils/logger');
 
 const PROVIDER_NAME = 'TMDb';
-const API_KEY = config.tmdb.apiKey;
-const API_URL = config.tmdb.apiUrl;
-
-const tmdbApiClient = axios.create({
-    baseURL: API_URL,
-    timeout: config.http.requestTimeoutMs || 8000,
-    headers: { 'User-Agent': config.userAgent },
-    params: { api_key: API_KEY },
-    validateStatus: status => status >= 200 && status < 500,
-});
 
 function formatTmdbAs100(voteAverage) {
     const num = Number(voteAverage);
@@ -21,14 +11,20 @@ function formatTmdbAs100(voteAverage) {
     return `${Math.round(num * 10)}/100`;
 }
 
-async function getTmdbRatingDetails(tmdbId, type) {
+async function getTmdbRatingDetails(tmdbId, type, userConfig = config.userConfig) {
+    const tmdbConfig = userConfig?.providers?.tmdb || config.tmdb;
     const endpoint = type === 'series' ? 'tv' : 'movie';
     const url = `/${endpoint}/${tmdbId}`;
 
     try {
         logger.debug(`[${PROVIDER_NAME}] Fetching ${url}`);
 
-        const res = await tmdbApiClient.get(url);
+        const res = await axios.get(`${tmdbConfig.apiUrl}${url}`, {
+            timeout: config.http.requestTimeoutMs || 8000,
+            headers: { 'User-Agent': config.userAgent },
+            params: { api_key: tmdbConfig.apiKey },
+            validateStatus: status => status >= 200 && status < 500,
+        });
         const { vote_average, vote_count } = res.data || {};
 
         if (res.status === 404) {
@@ -66,13 +62,19 @@ async function getTmdbRatingDetails(tmdbId, type) {
     }
 }
 
-async function getEpisodeRatingDetails(tmdbId, season, episode) {
+async function getEpisodeRatingDetails(tmdbId, season, episode, userConfig = config.userConfig) {
+    const tmdbConfig = userConfig?.providers?.tmdb || config.tmdb;
     const url = `/tv/${tmdbId}/season/${season}/episode/${episode}`;
 
     try {
         logger.debug(`[${PROVIDER_NAME}] Fetching ${url}`);
 
-        const res = await tmdbApiClient.get(url);
+        const res = await axios.get(`${tmdbConfig.apiUrl}${url}`, {
+            timeout: config.http.requestTimeoutMs || 8000,
+            headers: { 'User-Agent': config.userAgent },
+            params: { api_key: tmdbConfig.apiKey },
+            validateStatus: status => status >= 200 && status < 500,
+        });
 
         if (res.status === 404) {
             logger.warn(`[${PROVIDER_NAME}] 404 Not Found for TMDb episode: tv=${tmdbId} S${season}E${episode}`);
@@ -115,7 +117,7 @@ async function getEpisodeRatingDetails(tmdbId, season, episode) {
     }
 }
 
-async function getRating(type, _imdbId, streamInfo, tmdbId) {
+async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.userConfig) {
     if (!tmdbId) return null;
 
     if (streamInfo?.isEpisode) {
@@ -127,10 +129,10 @@ async function getRating(type, _imdbId, streamInfo, tmdbId) {
             return null;
         }
 
-        return getEpisodeRatingDetails(tmdbId, season, episode);
+        return getEpisodeRatingDetails(tmdbId, season, episode, userConfig);
     }
 
-    return getTmdbRatingDetails(tmdbId, type);
+    return getTmdbRatingDetails(tmdbId, type, userConfig);
 }
 
 module.exports = {

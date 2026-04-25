@@ -34,6 +34,7 @@ function finalizeRatings({
     mdblistDerivedResults,
     metaResults,
     mdblistResults,
+    userConfig = config.userConfig,
 }) {
     const imdbFlat = flattenResults(imdbResults);
     const tmdbFlat = flattenResults(tmdbResults);
@@ -133,17 +134,19 @@ function finalizeRatings({
     }
 
     logger.debug(`[Ratings] familyMap before enabled filter: ${JSON.stringify(Array.from(familyMap.values()))}`);
-    logger.debug(`[Ratings] enabled config: ${JSON.stringify(config.ratings.enabled)}`);
+    const ratingsConfig = userConfig?.ratings || config.ratings;
+
+    logger.debug(`[Ratings] enabled config: ${JSON.stringify(ratingsConfig.enabled)}`);
 
     const filtered = Array.from(familyMap.values()).filter(item =>
-        sourceMatchesEnabled(item.source, config.ratings.enabled)
+        sourceMatchesEnabled(item.source, ratingsConfig.enabled)
     );
 
     logger.debug(`[Ratings] after enabled filter: ${JSON.stringify(filtered)}`);
 
     filtered.sort((a, b) => {
-        const aIndex = orderIndexForSource(a.source, config.ratings.order);
-        const bIndex = orderIndexForSource(b.source, config.ratings.order);
+        const aIndex = orderIndexForSource(a.source, ratingsConfig.order);
+        const bIndex = orderIndexForSource(b.source, ratingsConfig.order);
 
         if (aIndex !== bIndex) return aIndex - bIndex;
 

@@ -4,12 +4,11 @@ require('dotenv').config();
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 const express = require('express');
-const path = require('path');
 const logger = require('../src/utils/logger'); // Adjust path relative to api/index.js
-const config = require('../src/config');       // Adjust path
-const addonInterface = require('../src/addon');   // Adjust path
-const { getRouter } = require('stremio-addon-sdk');
 const redisClient = require('../src/cache/redisClient'); // Adjust path
+const configApiRoutes = require('../src/routes/configApiRoutes');
+const stremioConfigRoutes = require('../src/routes/stremioConfigRoutes');
+const jsonErrorHandler = require('../src/middleware/jsonErrorHandler');
 
 let app; // Keep app instance reference
 
@@ -34,6 +33,8 @@ async function initializeApp() {
 
     // Create Express app
     app = express();
+    app.set('trust proxy', true);
+    app.use(express.json({ limit: '64kb' }));
 
     // Serve static files for /configure route (handled by vercel.json rewrites)
     // Vercel will serve the 'frontend/dist' directory directly based on vercel.json
@@ -44,11 +45,10 @@ async function initializeApp() {
         res.redirect('/configure');
     });
 
-    // Mount the Stremio addon (manifest.json, API, etc.)
-    // Note: the addonInterface returned by builder.getInterface()
-    // is itself an express router under the hood.
-    app.use(getRouter(addonInterface));
-    logger.info('Addon router mounted for Vercel.');
+    app.use(configApiRoutes);
+    app.use(stremioConfigRoutes);
+    app.use(jsonErrorHandler);
+    logger.info('Routes mounted for Vercel.');
 
     // DO NOT CALL app.listen() HERE - Vercel handles this.
 

@@ -1,0 +1,157 @@
+const crypto = require('crypto');
+const config = require('../config');
+const sqliteStore = require('../storage/sqliteStore');
+const {
+    buildUserConfigFromInput,
+} = require('../config/userConfig');
+const {
+    validateUserConfigProviders,
+} = require('./providerValidation');
+
+const PASSWORD_HASH_PREFIX = 'scrypt';
+const PASSWORD_KEY_LENGTH = 64;
+
+async function getDefaultUserConfig() {
+    return config.userConfig;
+}
+
+async function getUserConfigById(configId) {
+    if (!configId || configId === 'default') {
+        return getDefaultUserConfig();
+    }
+
+    return sqliteStore.getUserConfig(configId);
+}
+
+function publicConfigView(userConfig) {
+    return {
+        id: userConfig.id,
+        version: userConfig.version,
+        providers: {
+            tmdb: {
+                apiUrl: userConfig.providers.tmdb.apiUrl,
+                configured: Boolean(userConfig.providers.tmdb.apiKey),
+            },
+            mdblist: {
+                apiUrl: userConfig.providers.mdblist.apiUrl,
+                configured: Boolean(userConfig.providers.mdblist.apiKey),
+            },
+            publicmetadb: {
+                apiUrl: userConfig.providers.publicmetadb.apiUrl,
+                configured: Boolean(userConfig.providers.publicmetadb.apiKey),
+            },
+            jikan: {
+                apiUrl: userConfig.providers.jikan.apiUrl,
+            },
+        },
+        ratings: userConfig.ratings,
+    };
+}
+
+function privateConfigView(userConfig) {
+    return {
+        ...publicConfigView(userConfig),
+        providers: {
+            tmdb: {
+                ...publicConfigView(userConfig).providers.tmdb,
+                apiKey: userConfig.providers.tmdb.apiKey || '',
+            },
+            mdblist: {
+                ...publicConfigView(userConfig).providers.mdblist,
+                apiKey: userConfig.providers.mdblist.apiKey || '',
+            },
+            publicmetadb: {
+                ...publicConfigView(userConfig).providers.publicmetadb,
+                apiKey: userConfig.providers.publicmetadb.apiKey || '',
+            },
+            jikan: publicConfigView(userConfig).providers.jikan,
+        },
+    };
+}
+
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('base64url');
+    const hash = crypto.scryptSync(String(password), salt, PASSWORD_KEY_LENGTH).toString('base64url');
+    return `${PASSWORD_HASH_PREFIX}:${salt}:${hash}`;
+}
+
+function verifyPassword(password, passwordHash) {
+    if (!password || !passwordHash) return false;
+
+    const [prefix, salt, storedHash] = String(passwordHash).split(':');
+    if (prefix !== PASSWORD_HASH_PREFIX || !salt || !storedHash) return false;
+
+    const candidate = crypto.scryptSync(String(password), salt, PASSWORD_KEY_LENGTH);
+    const stored = Buffer.from(storedHash, 'base64url');
+
+    if (candidate.length !== stored.length) return false;
+    return crypto.timingSafeEqual(candidate, stored);
+}
+
+function assertValidPassword(password) {
+    if (!password || String(password).length < 8) {
+        const err = new Error('Config password must be at least 8 characters.');
+        err.statusCode = 400;
+        throw err;
+    }
+}
+
+async function createUserConfig(input = {}) {
+    assertValidPassword(input.password);
+
+    const id = crypto.randomUUID();
+    const userConfig = buildUserConfigFromInput({
+        ...input,
+        id,
+    }, config.userConfig);
+
+    await validateUserConfigProviders(userConfig);
+    sqliteStore.saveUserConfig(userConfig, hashPassword(input.password));
+    return userConfig;
+}
+
+async function getUserConfigForPassword(configId, password) {
+    const record = sqliteStore.getUserConfigRecord(configId);
+    if (!record || !verifyPassword(password, record.passwordHash)) {
+        const err = new Error('Invalid config UUID or password.');
+        err.statusCode = 401;
+        throw err;
+    }
+
+    return record.config;
+}
+
+async function updateUserConfig(configId, input = {}) {
+    const existing = await getUserConfigForPassword(configId, input.password);
+    const userConfig = buildUserConfigFromInput({
+        ...input,
+        id: existing.id,
+    }, config.userConfig);
+
+    await validateUserConfigProviders(userConfig);
+    sqliteStore.saveUserConfig(userConfig);
+    return userConfig;
+}
+
+async function deleteUserConfig(configId, password) {
+    await getUserConfigForPassword(configId, password);
+    return sqliteStore.deleteUserConfig(configId);
+}
+
+async function changeUserConfigPassword(configId, currentPassword, newPassword) {
+    await getUserConfigForPassword(configId, currentPassword);
+    assertValidPassword(newPassword);
+    return sqliteStore.setUserConfigPasswordHash(configId, hashPassword(newPassword));
+}
+
+module.exports = {
+    getDefaultUserConfig,
+    getUserConfigById,
+    getUserConfigForPassword,
+    createUserConfig,
+    updateUserConfig,
+    deleteUserConfig,
+    changeUserConfigPassword,
+    publicConfigView,
+    privateConfigView,
+};

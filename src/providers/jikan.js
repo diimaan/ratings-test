@@ -3,7 +3,6 @@ const config = require('../config');
 const logger = require('../utils/logger');
 
 const PROVIDER_NAME = 'Jikan';
-const API_URL = config.jikan.apiUrl;
 
 // Require a very confident match for title-based lookup.
 // This effectively means exact title match, optionally strengthened by year/anime signals.
@@ -106,12 +105,13 @@ function scoreCandidate(item, streamInfo) {
     return score;
 }
 
-async function getByMalId(malId) {
+async function getByMalId(malId, userConfig = config.userConfig) {
+    const apiUrl = userConfig?.providers?.jikan?.apiUrl || config.jikan.apiUrl;
     const id = Number(malId);
     if (!Number.isFinite(id) || id <= 0) return null;
 
     try {
-        const res = await axios.get(`${API_URL}/anime/${id}`, {
+        const res = await axios.get(`${apiUrl}/anime/${id}`, {
             timeout: config.http.requestTimeoutMs || 12000,
             headers: { 'User-Agent': config.userAgent },
             validateStatus: status => status >= 200 && status < 500,
@@ -133,7 +133,8 @@ async function getByMalId(malId) {
     }
 }
 
-async function searchByTitle(streamInfo, type) {
+async function searchByTitle(streamInfo, type, userConfig = config.userConfig) {
+    const apiUrl = userConfig?.providers?.jikan?.apiUrl || config.jikan.apiUrl;
     const title = String(streamInfo?.name || '').trim();
     if (!title) return null;
 
@@ -144,7 +145,7 @@ async function searchByTitle(streamInfo, type) {
     }
 
     try {
-        const res = await axios.get(`${API_URL}/anime`, {
+        const res = await axios.get(`${apiUrl}/anime`, {
             timeout: config.http.requestTimeoutMs || 12000,
             headers: { 'User-Agent': config.userAgent },
             params: { q: title, limit: 5 },
@@ -192,15 +193,15 @@ async function searchByTitle(streamInfo, type) {
     }
 }
 
-async function getRating(type, _imdbId, streamInfo, _tmdbId) {
+async function getRating(type, _imdbId, streamInfo, _tmdbId, userConfig = config.userConfig) {
     const malId = streamInfo?.malId || streamInfo?.mal_id || null;
 
     if (malId) {
-        const byId = await getByMalId(malId);
+        const byId = await getByMalId(malId, userConfig);
         if (byId) return byId;
     }
 
-    return searchByTitle(streamInfo, type);
+    return searchByTitle(streamInfo, type, userConfig);
 }
 
 module.exports = {

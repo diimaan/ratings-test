@@ -3,7 +3,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const { getTmdbData } = require('../utils/tmdbService');
 const providers = require('../providers');
-const imdbDataset = require('../utils/imdbRedisDataset');
+const imdbDataset = require('../utils/imdbLmdbDataset');
 const { parseMediaContext } = require('../utils/mediaContext');
 const {
     imdbLabel,
@@ -124,7 +124,7 @@ async function resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
     return results;
 }
 
-async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
+async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId, userConfig = config.userConfig) {
     const results = [];
 
     if (!tmdbId) {
@@ -138,7 +138,8 @@ async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
                 type,
                 rawId,
                 streamInfo,
-                tmdbId
+                tmdbId,
+                userConfig
             );
 
             if (
@@ -158,7 +159,8 @@ async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
                     type,
                     ctx.imdbId,
                     { ...streamInfo, isEpisode: false, season: null, episode: null },
-                    tmdbId
+                    tmdbId,
+                    userConfig
                 );
 
                 if (tmdbShow && isDisplayableRatingValue(tmdbLabel(type, false), tmdbShow.value)) {
@@ -180,7 +182,8 @@ async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
             type,
             rawId,
             streamInfo,
-            tmdbId
+            tmdbId,
+            userConfig
         );
 
         if (tmdbShow && isDisplayableRatingValue(tmdbLabel(type, false), tmdbShow.value)) {
@@ -196,14 +199,14 @@ async function resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
     return results;
 }
 
-async function resolvePrimaryAggregateRatings(type, rawId, streamInfo, tmdbId) {
+async function resolvePrimaryAggregateRatings(type, rawId, streamInfo, tmdbId, userConfig = config.userConfig) {
     const callableProviders = primaryAggregateProviders.filter(Boolean);
 
     if (!callableProviders.length) return [];
 
     return Promise.all(
         callableProviders.map((provider) =>
-            provider.getRating(type, rawId, streamInfo, tmdbId).catch((err) => {
+            provider.getRating(type, rawId, streamInfo, tmdbId, userConfig).catch((err) => {
                 logger.error(`Error from ${provider.name} for ${rawId}: ${err.message}`);
                 return null;
             })
@@ -211,14 +214,14 @@ async function resolvePrimaryAggregateRatings(type, rawId, streamInfo, tmdbId) {
     );
 }
 
-async function resolveFallbackAggregateRatings(type, rawId, streamInfo, tmdbId) {
+async function resolveFallbackAggregateRatings(type, rawId, streamInfo, tmdbId, userConfig = config.userConfig) {
     const callableProviders = fallbackAggregateProviders.filter(Boolean);
 
     if (!callableProviders.length) return [];
 
     return Promise.all(
         callableProviders.map((provider) =>
-            provider.getRating(type, rawId, streamInfo, tmdbId).catch((err) => {
+            provider.getRating(type, rawId, streamInfo, tmdbId, userConfig).catch((err) => {
                 logger.error(`Error from ${provider.name} for ${rawId}: ${err.message}`);
                 return null;
             })
@@ -226,18 +229,22 @@ async function resolveFallbackAggregateRatings(type, rawId, streamInfo, tmdbId) 
     );
 }
 
-function hasEnabledAggregateResults(results, type) {
+function hasEnabledAggregateResults(results, type, userConfig = config.userConfig) {
+    const ratingsConfig = userConfig?.ratings || config.ratings;
+
     return flattenResults(results).some(item => {
         const processed = processSingleRating(item, type);
-        return processed && sourceMatchesEnabled(processed.source, config.ratings.enabled);
+        return processed && sourceMatchesEnabled(processed.source, ratingsConfig.enabled);
     });
 }
 
-async function getRatings(type, rawId) {
+async function getRatings(type, rawId, options = {}) {
+    const userConfig = options.userConfig || config.userConfig;
     const ctx = parseMediaContext(type, rawId);
     if (!ctx) return null;
 
-    const cacheKey = `${CACHE_PREFIX}${type}:${rawId}`;
+    const cacheScope = userConfig?.cacheKey || 'default';
+    const cacheKey = `${CACHE_PREFIX}${cacheScope}:${type}:${rawId}`;
 
     if (redisClient.isReady()) {
         try {
@@ -261,7 +268,7 @@ async function getRatings(type, rawId) {
 
     logger.info(`Fetching ratings for ${ctx.imdbId} (${type})`);
 
-    const { tmdbId, name, date } = await getTmdbData(ctx.imdbId, type);
+    const { tmdbId, name, date } = await getTmdbData(ctx.imdbId, type, userConfig);
 
     const streamInfo = {
         name,
@@ -286,7 +293,7 @@ async function getRatings(type, rawId) {
     }
 
     const imdbPromise = resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId);
-    const tmdbPromise = resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId);
+    const tmdbPromise = resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId, userConfig);
 
     const aggregateRawId = ctx.isEpisode ? showRawId : rawId;
     const aggregateStreamInfo = ctx.isEpisode ? showStreamInfo : streamInfo;
@@ -294,7 +301,8 @@ async function getRatings(type, rawId) {
         type,
         aggregateRawId,
         aggregateStreamInfo,
-        tmdbId
+        tmdbId,
+        userConfig
     );
 
     const [
@@ -310,14 +318,15 @@ async function getRatings(type, rawId) {
     const mdblistResults = Array.isArray(primaryAggregateResults)
         ? primaryAggregateResults
         : [];
-    const hasMdblistRatings = hasEnabledAggregateResults(mdblistResults, type);
+    const hasMdblistRatings = hasEnabledAggregateResults(mdblistResults, type, userConfig);
     const fallbackAggregateResults = hasMdblistRatings
         ? []
         : await resolveFallbackAggregateRatings(
             type,
             aggregateRawId,
             aggregateStreamInfo,
-            tmdbId
+            tmdbId,
+            userConfig
         );
     const metaResults = Array.isArray(fallbackAggregateResults)
         ? fallbackAggregateResults
@@ -332,7 +341,8 @@ async function getRatings(type, rawId) {
         streamInfo,
         tmdbId,
         mdblistResults,
-        metaResults
+        metaResults,
+        userConfig
     );
 
     const finalRatings = finalizeRatings({
@@ -343,6 +353,7 @@ async function getRatings(type, rawId) {
         mdblistDerivedResults,
         metaResults,
         mdblistResults,
+        userConfig,
     });
 
     logger.info(`Resolved ${finalRatings.length} unique ratings for ${rawId}`);

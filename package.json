@@ -4,7 +4,7 @@
   "description": "Stremio add-on providing aggregated ratings from various sources.",
   "main": "src/server.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node src/server.js",
@@ -19,28 +19,23 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check-format": "prettier --check .",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "node --test"
   },
   "dependencies": {
     "axios": "^1.8.4",
+    "better-sqlite3": "^12.9.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "redis": "^4.6.15",
-    "stremio-addon-sdk": "^1.6.10"
+    "lmdb": "^3.5.4",
+    "redis": "^4.6.15"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
     "concurrently": "^8.2.2",
-    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9.24.0",
     "globals": "^16.0.0",
     "nodemon": "^3.1.9",
     "prettier": "^3.5.3"
-  },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
   }
 }

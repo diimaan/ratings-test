@@ -164,10 +164,11 @@ function wrapWithDivider(content) {
     return `${DIVIDER}\n${content}\n${DIVIDER}`;
 }
 
-function formatCompactRatings(ratings, type) {
+function formatCompactRatings(ratings, type, userConfig = config.userConfig) {
     if (!Array.isArray(ratings) || ratings.length === 0) return '';
 
-    const limit = config.ratings.compactLimit || 4;
+    const ratingsConfig = userConfig?.ratings || config.ratings;
+    const limit = ratingsConfig.compactLimit || 4;
     const mainRatings = getCompactMainRatings(ratings, type, limit);
     const lines = buildAgeLines(ratings);
 
@@ -201,17 +202,20 @@ function formatFullRatings(ratings) {
     return wrapWithDivider(lines.join('\n'));
 }
 
-function formatRatingsCard(ratings, type) {
-    const mode = (config.ratings.displayMode || 'full').toLowerCase();
+function formatRatingsCard(ratings, type, userConfig = config.userConfig) {
+    const ratingsConfig = userConfig?.ratings || config.ratings;
+    const mode = (ratingsConfig.displayMode || 'full').toLowerCase();
 
     if (mode === 'compact') {
-        return formatCompactRatings(ratings, type);
+        return formatCompactRatings(ratings, type, userConfig);
     }
 
     return formatFullRatings(ratings);
 }
 
-async function streamHandler({ type, id }) {
+async function streamHandler({ type, id, userConfig }) {
+    const activeUserConfig = userConfig || config.userConfig;
+
     logger.info(`Received stream request for: type=${type}, id=${id}`);
 
     if (!id?.startsWith('tt')) {
@@ -219,14 +223,14 @@ async function streamHandler({ type, id }) {
         return { streams: [] };
     }
 
-    const ratings = await ratingService.getRatings(type, id);
+    const ratings = await ratingService.getRatings(type, id, { userConfig: activeUserConfig });
 
     if (!Array.isArray(ratings) || ratings.length === 0) {
         logger.info(`No ratings resolved for ${id}`);
         return { streams: [] };
     }
 
-    const description = formatRatingsCard(ratings, type);
+    const description = formatRatingsCard(ratings, type, activeUserConfig);
 
     logger.debug(`Resolved ratings payload for ${id}: ${JSON.stringify(ratings)}`);
     logger.debug(`Resolved description for ${id}: ${JSON.stringify(description)}`);

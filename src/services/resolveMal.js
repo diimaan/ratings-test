@@ -1,16 +1,25 @@
 const logger = require('../utils/logger');
 const providers = require('../providers');
 const {
-    isLikelyAnimeFromMdblistRaw,
+    isLikelyAnimeFromMdblistMetadata,
 } = require('./deriveSafety');
 const {
     isDisplayableRatingValue,
     pickFirstValidFromArray,
-    findMdblistRawPayload,
+    findMdblistMetadata,
     flattenResults,
 } = require('./ratingHelpers');
 
-async function resolveMalRatings(type, rawId, ctx, streamInfo, tmdbId, mdblistResults, metaResults) {
+async function resolveMalRatings(
+    type,
+    rawId,
+    ctx,
+    streamInfo,
+    tmdbId,
+    mdblistResults,
+    metaResults,
+    userConfig
+) {
     const lookupRawId = ctx.isEpisode ? ctx.imdbId : rawId;
     const lookupStreamInfo = ctx.isEpisode
         ? { ...streamInfo, isEpisode: false, season: null, episode: null }
@@ -20,20 +29,20 @@ async function resolveMalRatings(type, rawId, ctx, streamInfo, tmdbId, mdblistRe
     const metaFlat = flattenResults(metaResults);
 
     const mdblistFamily = pickFirstValidFromArray(mdblistFlat, 'MAL', type);
-    const mdblistRaw = findMdblistRawPayload(mdblistFlat);
+    const mdblistMetadata = findMdblistMetadata(mdblistFlat);
 
-    const looksAnime = isLikelyAnimeFromMdblistRaw(mdblistRaw);
-    const malId = mdblistRaw?.ids?.mal;
+    const looksAnime = isLikelyAnimeFromMdblistMetadata(mdblistMetadata);
+    const malId = mdblistMetadata?.ids?.mal;
     const hasAnimeSignal = Boolean(looksAnime || malId || mdblistFamily);
 
-    if (!looksAnime && mdblistRaw) {
+    if (!looksAnime && mdblistMetadata) {
         logger.info('Skipping MAL resolution for non-anime title');
         return [];
     }
 
     if (malId && providers.jikanProvider?.getByMalId) {
         try {
-            const jikan = await providers.jikanProvider.getByMalId(malId);
+            const jikan = await providers.jikanProvider.getByMalId(malId, userConfig);
             if (jikan && isDisplayableRatingValue('MAL', jikan.value)) {
                 logger.info('MAL rating found via Jikan MAL ID');
                 return [{
@@ -67,7 +76,8 @@ async function resolveMalRatings(type, rawId, ctx, streamInfo, tmdbId, mdblistRe
             type,
             lookupRawId,
             lookupStreamInfo,
-            tmdbId
+            tmdbId,
+            userConfig
         );
 
         if (jikanFallback && isDisplayableRatingValue('MAL', jikanFallback.value)) {

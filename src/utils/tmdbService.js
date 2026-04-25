@@ -7,17 +7,11 @@ function normalizeImdbId(imdbId) {
     return imdbId?.split(':')[0];
 }
 
-const tmdbFindClient = axios.create({
-    baseURL: config.tmdb.apiUrl,
-    timeout: config.http.requestTimeoutMs || 8000,
-    headers: { 'User-Agent': config.userAgent },
-    validateStatus: status => status >= 200 && status < 500,
-});
-
-async function getTmdbData(imdbId, type) {
+async function getTmdbData(imdbId, type, userConfig = config.userConfig) {
+    const tmdbConfig = userConfig?.providers?.tmdb || config.tmdb;
     const baseImdb = normalizeImdbId(imdbId);
 
-    if (!config.tmdb.apiKey) {
+    if (!tmdbConfig.apiKey) {
         logger.error('TMDB API key not configured.');
         return { tmdbId: null, name: null, date: null };
     }
@@ -30,11 +24,14 @@ async function getTmdbData(imdbId, type) {
     const path = `/find/${baseImdb}`;
 
     try {
-        logger.debug(`[TMDB] HTTP GET: ${config.tmdb.apiUrl}${path}`);
+        logger.debug(`[TMDB] HTTP GET: ${tmdbConfig.apiUrl}${path}`);
 
-        const response = await tmdbFindClient.get(path, {
+        const response = await axios.get(`${tmdbConfig.apiUrl}${path}`, {
+            timeout: config.http.requestTimeoutMs || 8000,
+            headers: { 'User-Agent': config.userAgent },
+            validateStatus: status => status >= 200 && status < 500,
             params: {
-                api_key: config.tmdb.apiKey,
+                api_key: tmdbConfig.apiKey,
                 external_source: 'imdb_id',
             },
         });

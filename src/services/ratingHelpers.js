@@ -82,7 +82,7 @@ function isDisplayableRatingValue(source, value) {
 }
 
 function processSingleRating(rating, type) {
-    if (!rating || rating._raw) return null;
+    if (!rating || rating._mdblist) return null;
     if (!rating.source || rating.value === undefined || rating.value === null) return null;
 
     const source = normalizeOtherSourceLabel(rating.source, type);
@@ -192,10 +192,12 @@ function pickPreferredValidFromArray(items, family, type) {
     return processedItems[0] || null;
 }
 
-function findMdblistRawPayload(mdblistResults) {
+function findMdblistMetadata(mdblistResults) {
     if (!Array.isArray(mdblistResults)) return null;
-    const rawEntry = mdblistResults.find(item => item && item._raw && typeof item._raw === 'object');
-    return rawEntry?._raw || null;
+    const metadataEntry = mdblistResults.find(
+        item => item && item._mdblist && typeof item._mdblist === 'object'
+    );
+    return metadataEntry?._mdblist || null;
 }
 
 function flattenResults(results) {
@@ -223,7 +225,7 @@ module.exports = {
     orderIndexForSource,
     pickFirstValidFromArray,
     pickPreferredValidFromArray,
-    findMdblistRawPayload,
+    findMdblistMetadata,
     flattenResults,
     selectFamilyResult,
 };

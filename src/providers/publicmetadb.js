@@ -4,19 +4,6 @@ const logger = require('../utils/logger');
 
 const PROVIDER_NAME = 'PublicMetaDB';
 
-const API_URL = config.publicmetadb?.apiUrl;
-const API_KEY = config.publicmetadb?.apiKey;
-
-const client = axios.create({
-    baseURL: API_URL,
-    timeout: config.http.requestTimeoutMs || 8000,
-    headers: {
-        'User-Agent': config.userAgent,
-        ...(API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {}),
-    },
-    validateStatus: status => status >= 200 && status < 500,
-});
-
 function mapLabel(label) {
     switch (String(label || '').trim().toUpperCase()) {
         case 'IM': return 'IMDb';
@@ -78,13 +65,15 @@ function average(values) {
     return valid.reduce((sum, v) => sum + v, 0) / valid.length;
 }
 
-async function getRating(type, _imdbId, streamInfo, tmdbId) {
-    if (!API_URL) {
+async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.userConfig) {
+    const providerConfig = userConfig?.providers?.publicmetadb || config.publicmetadb;
+
+    if (!providerConfig.apiUrl) {
         logger.warn(`[${PROVIDER_NAME}] API URL not configured`);
         return null;
     }
 
-    if (!API_KEY) {
+    if (!providerConfig.apiKey) {
         logger.warn(`[${PROVIDER_NAME}] API key not configured`);
         return null;
     }
@@ -107,7 +96,13 @@ async function getRating(type, _imdbId, streamInfo, tmdbId) {
     try {
         logger.debug(`[${PROVIDER_NAME}] Fetching ratings for tmdb=${tmdbId} type=${mediaType}`);
 
-        const res = await client.get('/api/external/ratings', {
+        const res = await axios.get(`${providerConfig.apiUrl}/api/external/ratings`, {
+            timeout: config.http.requestTimeoutMs || 8000,
+            headers: {
+                'User-Agent': config.userAgent,
+                Authorization: `Bearer ${providerConfig.apiKey}`,
+            },
+            validateStatus: status => status >= 200 && status < 500,
             params: {
                 tmdb_id: tmdbId,
                 media_type: mediaType,

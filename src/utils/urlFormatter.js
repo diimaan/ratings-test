@@ -4,7 +4,7 @@ function formatTitleForUrlSlug(title) {
     return String(title)
         .toLowerCase()
         .replace(/['’`]/g, '')
-        .replace(/[:_\/()[\]&@!$%^*+=?.,";]+/g, '-')
+        .replace(/[:_/()[\]&@!$%^*+=?.,";]+/g, '-')
         .replace(/[^a-z0-9\s-]/g, '')
         .trim()
         .replace(/\s+/g, '-')

@@ -1,53 +1,41 @@
 const logger = require('../utils/logger');
-const { findMdblistRawPayload, flattenResults } = require('./ratingHelpers');
+const {
+    findMdblistMetadata,
+    flattenResults,
+} = require('./ratingHelpers');
 
-function isLikelyAnimeFromMdblistRaw(mdblistRaw) {
-    if (!mdblistRaw || typeof mdblistRaw !== 'object') return false;
+function isLikelyAnimeFromMdblistMetadata(metadata) {
+    if (!metadata || typeof metadata !== 'object') return false;
 
-    if (mdblistRaw?.ids?.mal) return true;
+    if (metadata.flags?.hasMalId || metadata.ids?.mal) return true;
+    if (metadata.flags?.isJapaneseLanguage || metadata.language === 'ja') return true;
+    if (metadata.flags?.hasAnimeGenre) return true;
 
-    const language = String(mdblistRaw.language || '').toLowerCase();
-    if (language === 'ja') return true;
-
-    if (Array.isArray(mdblistRaw.genres)) {
-        const hasAnimeGenre = mdblistRaw.genres.some(g =>
-            /anime/i.test(String(g?.title || ''))
-        );
-        if (hasAnimeGenre) return true;
+    if (Array.isArray(metadata.genres)) {
+        return metadata.genres.some(genre => /anime/i.test(String(genre || '')));
     }
 
     return false;
 }
 
-function normalizeKeywordName(value) {
-    return String(value || '')
-        .trim()
-        .toLowerCase();
-}
-
-function getMdblistKeywordNames(mdblistRaw) {
-    if (!Array.isArray(mdblistRaw?.keywords)) return [];
-
-    return [...new Set(
-        mdblistRaw.keywords
-            .map(item => normalizeKeywordName(item?.name))
-            .filter(Boolean)
-    )];
-}
-
 function deriveMdblistSafetyResults(mdblistResults) {
     const mdblistFlat = flattenResults(mdblistResults);
-    const mdblistRaw = findMdblistRawPayload(mdblistFlat);
+    const metadata = findMdblistMetadata(mdblistFlat);
 
-    if (!mdblistRaw || typeof mdblistRaw !== 'object') {
+    if (!metadata) {
         return [];
     }
 
     const results = [];
 
-    const commonSense = Number(mdblistRaw?.commonsense_media?.common_sense ?? mdblistRaw?.age_rating);
-    const parentalNudity = Number(mdblistRaw?.commonsense_media?.parental_nudity);
-    const keywords = getMdblistKeywordNames(mdblistRaw);
+    const commonSense = Number(
+        metadata?.age?.commonSense ??
+        metadata?.age?.ageRating
+    );
+    const parentalNudity = Number(
+        metadata?.age?.parentalNudity
+    );
+    const keywords = Array.isArray(metadata?.keywords) ? metadata.keywords : [];
 
     if (Number.isFinite(commonSense) && commonSense > 0) {
         results.push({
@@ -145,5 +133,5 @@ function deriveMdblistSafetyResults(mdblistResults) {
 
 module.exports = {
     deriveMdblistSafetyResults,
-    isLikelyAnimeFromMdblistRaw,
+    isLikelyAnimeFromMdblistMetadata,
 };

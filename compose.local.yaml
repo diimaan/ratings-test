@@ -1,0 +1,66 @@
+services:
+  ratings-aggregator:
+    build:
+      context: .
+      args:
+        VITE_HOME_BLURB: ${VITE_HOME_BLURB}
+    image: ratings-aggregator:local
+    container_name: ratings-aggregator-local
+    restart: unless-stopped
+    ports:
+      - "${PORT:-61262}:${PORT:-61262}"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-61262}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS:-12000}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      TMDB_API_URL: ${TMDB_API_URL:-https://api.themoviedb.org/3}
+      MDBLIST_API_KEY: ${MDBLIST_API_KEY}
+      MDBLIST_API_URL: ${MDBLIST_API_URL:-https://api.mdblist.com}
+      PUBLICMETADB_API_KEY: ${PUBLICMETADB_API_KEY:-}
+      PUBLICMETADB_API_URL: ${PUBLICMETADB_API_URL:-https://publicmetadb.com/api}
+      JIKAN_API_URL: ${JIKAN_API_URL:-https://api.jikan.moe/v4}
+      REDIS_URL: redis://redis:6379
+      SQLITE_DB_PATH: /app/data/app/ratings.sqlite
+      LMDB_DATA_DIR: /app/data/lmdb
+      CONFIG_ENCRYPTION_SECRET: ${CONFIG_ENCRYPTION_SECRET:-local-dev-change-me}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-86400}
+      NEGATIVE_CACHE_TTL_SECONDS: ${NEGATIVE_CACHE_TTL_SECONDS:-21600}
+      DISPLAY_MODE: ${DISPLAY_MODE:-full}
+      COMPACT_RATINGS_LIMIT: ${COMPACT_RATINGS_LIMIT:-4}
+      ENABLED_RATINGS: ${ENABLED_RATINGS}
+      RATINGS_ORDER: ${RATINGS_ORDER}
+      IMDB_BASE_URL: ${IMDB_BASE_URL:-https://www.imdb.com}
+      IMDB_DATASET_MODE: optional
+      IMDB_DATA_DIR: /app/data/imdb
+      IMDB_DATASET_BATCH_SIZE: ${IMDB_DATASET_BATCH_SIZE:-5000}
+      IMDB_EPISODE_CACHE_TTL_SECONDS: ${IMDB_EPISODE_CACHE_TTL_SECONDS:-604800}
+      USER_AGENT: ${USER_AGENT}
+      ADDON_SUFFIX: ${ADDON_SUFFIX:-Local}
+      VITE_HOME_BLURB: ${VITE_HOME_BLURB}
+    depends_on:
+      - redis
+    volumes:
+      - ratings-app-local:/app/data/app
+      - ratings-lmdb-local:/app/data/lmdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-61262}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ratings-redis-local
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ratings-redis-local:/data
+
+volumes:
+  ratings-redis-local:
+  ratings-app-local:
+  ratings-lmdb-local:

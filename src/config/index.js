@@ -2,66 +2,16 @@ require('dotenv').config();
 
 const pkg = require('../../package.json');
 const addonManifest = require('./manifest');
+const {
+    DEFAULT_HTTP_TIMEOUT_MS,
+    DEFAULT_USER_AGENT,
+} = require('./defaults');
+const {
+    buildUserConfigFromEnv,
+    parsePositiveInt,
+} = require('./userConfig');
 
-const DEFAULT_HTTP_TIMEOUT_MS = 12000;
-const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
-
-function parseCsv(value, fallback = []) {
-    if (!value || typeof value !== 'string') return fallback;
-    return value
-        .split(',')
-        .map(v => v.trim())
-        .filter(Boolean);
-}
-
-function parsePositiveInt(value, fallback) {
-    const parsed = parseInt(value, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-const defaultEnabledRatings = [
-    'Common Sense',
-    'Not Safe',
-    'Sexual Violence',
-    'Sex & Nudity',
-    'IMDb (Movie)',
-    'IMDb (Show)',
-    'IMDb (Episode)',
-    'TMDb (Movie)',
-    'TMDb (Show)',
-    'TMDb (Episode)',
-    'MC',
-    'RT',
-    'PC',
-    'Trakt',
-    'MAL',
-    'Letterboxd',
-    'Roger Ebert',
-];
-
-const defaultRatingsOrder = [
-    'Common Sense',
-    'Not Safe',
-    'Sexual Violence',
-    'Sex & Nudity',
-    'IMDb (Episode)',
-    'IMDb (Show)',
-    'IMDb (Movie)',
-    'TMDb (Episode)',
-    'TMDb (Show)',
-    'TMDb (Movie)',
-    'MAL',
-    'Letterboxd',
-    'MC',
-    'RT',
-    'PC',
-    'Trakt',
-    'Roger Ebert',
-];
-
-const compactCount = parsePositiveInt(process.env.COMPACT_RATINGS_LIMIT, 4);
-const displayModeRaw = (process.env.DISPLAY_MODE || 'full').trim().toLowerCase();
-const displayMode = ['compact', 'full'].includes(displayModeRaw) ? displayModeRaw : 'full';
+const userConfig = buildUserConfigFromEnv(process.env);
 const requestTimeoutMs = parsePositiveInt(
     process.env.HTTP_TIMEOUT_MS || process.env.PROVIDER_TIMEOUT,
     DEFAULT_HTTP_TIMEOUT_MS
@@ -73,38 +23,34 @@ const config = {
     http: {
         requestTimeoutMs,
     },
-    tmdb: {
-        apiKey: process.env.TMDB_API_KEY,
-        apiUrl: process.env.TMDB_API_URL || 'https://api.themoviedb.org/3',
-    },
-    mdblist: {
-        apiKey: process.env.MDBLIST_API_KEY,
-        apiUrl: process.env.MDBLIST_API_URL || 'https://api.mdblist.com',
-    },
-    publicmetadb: {
-        apiKey: process.env.PUBLICMETADB_API_KEY || '',
-        apiUrl: process.env.PUBLICMETADB_API_URL || 'https://publicmetadb.com/api',
-    },
-    jikan: {
-        apiUrl: process.env.JIKAN_API_URL || 'https://api.jikan.moe/v4',
-    },
+    userConfig,
+    tmdb: userConfig.providers.tmdb,
+    mdblist: userConfig.providers.mdblist,
+    publicmetadb: userConfig.providers.publicmetadb,
+    jikan: userConfig.providers.jikan,
     redis: {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
+    },
+    storage: {
+        sqlitePath: process.env.SQLITE_DB_PATH || '/app/data/app/ratings.sqlite',
+        lmdbPath: process.env.LMDB_DATA_DIR || '/app/data/lmdb',
+        configEncryptionEnabled: Boolean(process.env.CONFIG_ENCRYPTION_SECRET),
     },
     cache: {
         ttlSeconds: parsePositiveInt(process.env.CACHE_TTL_SECONDS, 259200),
         negativeTtlSeconds: parsePositiveInt(process.env.NEGATIVE_CACHE_TTL_SECONDS, 21600),
     },
-    ratings: {
-        enabled: parseCsv(process.env.ENABLED_RATINGS, defaultEnabledRatings),
-        order: parseCsv(process.env.RATINGS_ORDER, defaultRatingsOrder),
-        displayMode,
-        compactLimit: compactCount,
-    },
+    ratings: userConfig.ratings,
     sources: {
         imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
         metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
         rottentomatoesBaseUrl: process.env.ROTTENTOMATOES_BASE_URL || 'https://www.rottentomatoes.com',
+    },
+    imdbDataset: {
+        mode: (process.env.IMDB_DATASET_MODE || 'required').trim().toLowerCase(),
+        dataDir: process.env.IMDB_DATA_DIR || '/app/data/imdb',
+        batchSize: parsePositiveInt(process.env.IMDB_DATASET_BATCH_SIZE, 5000),
+        hotCacheTtlSeconds: parsePositiveInt(process.env.IMDB_EPISODE_CACHE_TTL_SECONDS, 604800),
     },
     userAgent: process.env.USER_AGENT || DEFAULT_USER_AGENT,
     addon: addonManifest,
@@ -122,6 +68,16 @@ if (!config.tmdb.apiKey) {
 if (!process.env.REDIS_URL) {
     console.warn('WARNING: REDIS_URL is not set. Caching will use default redis://localhost:6379.');
     hasWarning = true;
+}
+
+if (!process.env.CONFIG_ENCRYPTION_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+        console.error('FATAL ERROR: CONFIG_ENCRYPTION_SECRET is required in production.');
+        hasFatalError = true;
+    } else {
+        console.warn('WARNING: CONFIG_ENCRYPTION_SECRET is not set. Saved user provider keys will not be encrypted at rest.');
+        hasWarning = true;
+    }
 }
 
 if (!config.mdblist.apiKey) {
