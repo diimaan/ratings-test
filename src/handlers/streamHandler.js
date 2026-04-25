@@ -81,13 +81,15 @@ function getCompactMainRatings(ratings, type, limit) {
     const selected = [];
 
     for (const group of priorityGroups) {
-        const match = candidates.find(
-            rating => !pickedSources.has(rating.source) && group.includes(rating.source)
-        );
+        const match = group
+            .map(source => candidates.find(
+                rating => !pickedSources.has(rating.source) && rating.source === source
+            ))
+            .find(Boolean);
 
         if (match) {
             selected.push(match);
-            pickedSources.add(match.source);
+            group.forEach(source => pickedSources.add(source));
         }
 
         if (selected.length >= limit) {

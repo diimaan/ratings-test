@@ -13,7 +13,8 @@ function asyncRoute(handler) {
 }
 
 function absoluteUrl(req, path) {
-    return `${req.protocol}://${req.get('host')}${path}`;
+    const host = req.get('x-forwarded-host') || req.get('host');
+    return `${req.protocol}://${host}${path}`;
 }
 
 function clientKey(req) {
