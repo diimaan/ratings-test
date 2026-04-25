@@ -111,6 +111,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
 
   const canSave = providers.tmdb.apiKey.trim().length > 0 && password.length >= 8;
   const isExistingConfig = configId !== 'default';
+  const canInstall = isExistingConfig && manifestUrl.includes('/stremio/');
 
   const updateProvider = (provider, field, value) => {
     setProviders((current) => ({
@@ -346,16 +347,31 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   };
 
   const copyManifest = () => {
+    if (!canInstall) {
+      toast.error('Create or retrieve a UUID config first');
+      return;
+    }
+
     navigator.clipboard.writeText(manifestUrl)
       .then(() => toast.success('Manifest URL copied'))
       .catch(() => toast.error('Could not copy manifest URL'));
   };
 
   const openStremioWeb = () => {
+    if (!canInstall) {
+      toast.error('Create or retrieve a UUID config first');
+      return;
+    }
+
     window.open(`https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`, '_blank');
   };
 
   const openStremioApp = () => {
+    if (!canInstall) {
+      toast.error('Create or retrieve a UUID config first');
+      return;
+    }
+
     window.location.href = manifestUrl.replace(/^https?:\/\//i, 'stremio://');
   };
 
@@ -474,7 +490,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
               placeholder="Required for retrieving or updating this UUID"
               autoComplete="new-password"
             />
-            <span className="text-xs text-gray-400">Use this later with the UUID to retrieve and update the same config.</span>
+            <span className="text-xs text-amber-200">Keep this with the UUID. There is no password recovery for saved configs.</span>
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -599,23 +615,37 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         <p className="mb-5 text-sm text-gray-400">Current config: <span className="font-mono text-gray-200">{configId}</span></p>
 
         <div className="mb-5 rounded-lg border border-white/10 bg-slate-950 p-3">
-          <p className="break-all font-mono text-xs text-emerald-200">{manifestUrl}</p>
+          <p className="break-all font-mono text-xs text-emerald-200">
+            {canInstall ? manifestUrl : 'Create or retrieve a UUID config to unlock the install manifest.'}
+          </p>
         </div>
 
         <div className="grid gap-3">
-          <button onClick={copyManifest} className="button-gradient flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold">
+          <button
+            onClick={copyManifest}
+            disabled={!canInstall}
+            className="button-gradient flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <FaCopy /> Copy URL
           </button>
-          <button onClick={openStremioWeb} className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-4 py-3 font-semibold text-white hover:border-emerald-400">
+          <button
+            onClick={openStremioWeb}
+            disabled={!canInstall}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-4 py-3 font-semibold text-white hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <FaExternalLinkAlt /> Stremio Web
           </button>
-          <button onClick={openStremioApp} className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-4 py-3 font-semibold text-white hover:border-emerald-400">
+          <button
+            onClick={openStremioApp}
+            disabled={!canInstall}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-4 py-3 font-semibold text-white hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <SiStremio /> Open Stremio
           </button>
         </div>
 
         <div className="mt-6 rounded-lg border border-amber-300/20 bg-amber-300/10 p-4 text-sm text-amber-100">
-          API keys are stored server-side against the UUID config. The manifest URL only contains the UUID.
+          This is BYOB-only. API keys are stored server-side against your UUID config, and the install URL only contains the UUID.
         </div>
 
         <div className="mt-6 border-t border-white/10 pt-6">
@@ -640,7 +670,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
             <button
               type="button"
               onClick={retrieveConfig}
-              disabled={isRetrieving}
+              disabled={isRetrieving || !retrieveId.trim() || !retrievePassword}
               className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-4 py-3 font-semibold text-white hover:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isRetrieving ? <FaSpinner className="animate-spin" /> : <FaKey />}
