@@ -154,7 +154,7 @@ function deriveMdblistSafetyResults(mdblistResults, options = {}) {
     if (safetyCertification === 'unsafe' || hasSexualViolence || hasSexAndNudity) {
         results.push({
             source: 'Not Safe',
-            value: safetyCertification === 'unsafe' ? '⚠️ Not Parent Safe' : '⚠️ Not Safe',
+            value: '⚠️ Not Parent Safe',
         });
     }
 

@@ -16,7 +16,7 @@ function getCompactLabel(source) {
         'Roger Ebert': '✍️ Ebert',
         'Common Sense': '👪 CSM',
         'Parent Safe': '✅ Parent Safe',
-        'Not Safe': '⚠️ Not Safe',
+        'Not Safe': '⚠️ Not Parent Safe',
         'Sexual Violence': '💔 Sexual Violence',
         'Sex & Nudity': '🫣 Sex & Nudity',
     };
@@ -42,7 +42,7 @@ function getFullLabel(source) {
         'Roger Ebert': '✍️ Roger Ebert',
         'Common Sense': '👪 Common Sense',
         'Parent Safe': '✅ Parent Safe',
-        'Not Safe': '⚠️ Not Safe',
+        'Not Safe': '⚠️ Not Parent Safe',
         'Sexual Violence': '💔 Sexual Violence',
         'Sex & Nudity': '🫣 Sex & Nudity',
     };
@@ -53,7 +53,7 @@ function getFullLabel(source) {
 function getWarningLabel(source) {
     const warningLabels = {
         'Parent Safe': '✅ Certified Parent Safe',
-        'Not Safe': '⚠️ Not Safe',
+        'Not Safe': '⚠️ Not Parent Safe',
         'Sexual Violence': '💔 Sexual Violence',
         'Sex & Nudity': '🫣 Sex & Nudity',
         'Violence & Scariness': '🔪 Violence & Scariness',

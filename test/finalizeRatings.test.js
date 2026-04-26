@@ -135,7 +135,7 @@ test('prioritizes direct safety results over MDBList-derived safety results', ()
         ],
         mdblistDerivedResults: [
             { source: 'Common Sense', value: '17+' },
-            { source: 'Not Safe', value: '⚠️ Not Safe' },
+            { source: 'Not Safe', value: '⚠️ Not Parent Safe' },
         ],
         metaResults: [],
         mdblistResults: [],
@@ -162,7 +162,7 @@ test('keeps MDBList-derived warnings when direct safety only returns an age rati
         ],
         mdblistDerivedResults: [
             { source: 'Common Sense', value: '17+' },
-            { source: 'Not Safe', value: '⚠️ Not Safe' },
+            { source: 'Not Safe', value: '⚠️ Not Parent Safe' },
             { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
         ],
         metaResults: [],
@@ -175,7 +175,7 @@ test('keeps MDBList-derived warnings when direct safety only returns an age rati
 
     assert.deepEqual(ratings, [
         { source: 'Common Sense', value: '13+' },
-        { source: 'Not Safe', value: '⚠️ Not Safe' },
+        { source: 'Not Safe', value: '⚠️ Not Parent Safe' },
         { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
     ]);
 });

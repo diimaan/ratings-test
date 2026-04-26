@@ -67,7 +67,7 @@ test('derives sex and nudity warning from MDBList exact sex keyword', () => {
 
     assert.deepEqual(derived, [
         { source: 'Common Sense', value: '13+' },
-        { source: 'Not Safe', value: '⚠️ Not Safe' },
+        { source: 'Not Safe', value: '⚠️ Not Parent Safe' },
         { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
     ]);
 });

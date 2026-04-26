@@ -58,6 +58,10 @@ function isRogerEbertStars(value) {
 function stripScale(value, source = '') {
     const text = String(value || '').trim();
 
+    if (source === 'Not Safe' && /not safe|not parent safe/i.test(text)) {
+        return '⚠️ Not Parent Safe';
+    }
+
     if (source === 'Roger Ebert' && isRogerEbertStars(text)) {
         return text;
     }
