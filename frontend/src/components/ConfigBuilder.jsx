@@ -685,14 +685,14 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
             <button
               type="button"
               onClick={() => exportConfig(false)}
-              className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-4 py-3 font-semibold text-white hover:border-emerald-400"
+              className="button-gradient flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold text-white"
             >
               <FaDownload /> Export Safe JSON
             </button>
             <button
               type="button"
               onClick={() => exportConfig(true)}
-              className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/10 px-4 py-3 font-semibold text-amber-100 hover:border-amber-200"
+              className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-amber-300/30 bg-slate-950 px-4 py-3 font-semibold text-amber-100 hover:border-amber-200"
             >
               <FaDownload /> Export With Keys
             </button>

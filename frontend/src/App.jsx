@@ -10,13 +10,13 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 const SponsorBanner = ({ html }) => {
   return (
     <motion.div
-      className="relative mx-auto mt-6 bg-[#0f1a2f] text-sm sm:text-base text-gray-200 px-6 py-4 rounded-xl shadow max-w-2xl backdrop-blur border border-white/5"
+      className="relative mx-auto mt-6 flex max-w-5xl items-center justify-center rounded-xl border border-white/5 bg-[#0f1a2f] px-6 py-5 text-center text-sm text-gray-200 shadow backdrop-blur sm:text-base"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.3 }}
     >
       <div
-        className="sponsor-content flex items-start gap-4 text-left"
+        className="sponsor-content w-full text-center"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </motion.div>
@@ -46,7 +46,7 @@ function App() {
       >
         <header className="text-center mb-12 space-y-4">
           <motion.h1
-            className="text-4xl sm:text-6xl font-extrabold gradient-text"
+            className="pb-2 text-4xl font-extrabold leading-[1.15] gradient-text sm:text-6xl"
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5 }}
