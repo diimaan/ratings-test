@@ -150,3 +150,32 @@ test('prioritizes direct safety results over MDBList-derived safety results', ()
         { source: 'Parent Safe', value: '✅ Certified Parent Safe' },
     ]);
 });
+
+test('keeps MDBList-derived warnings when direct safety only returns an age rating', () => {
+    const ratings = finalizeRatings({
+        type: 'movie',
+        imdbResults: [],
+        tmdbResults: [],
+        malResults: [],
+        directSafetyResults: [
+            { source: 'Common Sense', value: '13+' },
+        ],
+        mdblistDerivedResults: [
+            { source: 'Common Sense', value: '17+' },
+            { source: 'Not Safe', value: '⚠️ Not Safe' },
+            { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
+        ],
+        metaResults: [],
+        mdblistResults: [],
+        userConfig: userConfig({
+            enabled: ['Common Sense', 'Not Safe', 'Sex & Nudity'],
+            order: ['Common Sense', 'Not Safe', 'Sex & Nudity'],
+        }),
+    });
+
+    assert.deepEqual(ratings, [
+        { source: 'Common Sense', value: '13+' },
+        { source: 'Not Safe', value: '⚠️ Not Safe' },
+        { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
+    ]);
+});

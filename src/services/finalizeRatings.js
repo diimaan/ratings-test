@@ -27,6 +27,46 @@ const RATING_PRIORITY = {
     'Roger Ebert': ['MDBLIST', 'PMDB'],
 };
 
+const SAFETY_FAMILIES = [
+    'Common Sense',
+    'Parent Safe',
+    'Not Safe',
+    'Sexual Violence',
+    'Sex & Nudity',
+];
+
+const SAFETY_VERDICT_FAMILIES = new Set([
+    'Parent Safe',
+    'Not Safe',
+]);
+
+function safetyFamiliesIn(results, type) {
+    const families = new Set();
+
+    for (const item of results) {
+        const processed = processSingleRating(item, type);
+        if (processed?.source) families.add(processed.source);
+    }
+
+    return families;
+}
+
+function shouldKeepDerivedSafety(item, directFamilies, type) {
+    const processed = processSingleRating(item, type);
+    if (!processed?.source) return false;
+
+    if (directFamilies.has(processed.source)) return false;
+
+    if (
+        SAFETY_VERDICT_FAMILIES.has(processed.source) &&
+        [...SAFETY_VERDICT_FAMILIES].some(family => directFamilies.has(family))
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
 function finalizeRatings({
     type,
     imdbResults,
@@ -43,7 +83,10 @@ function finalizeRatings({
     const malFlat = flattenResults(malResults);
     const directSafetyFlat = flattenResults(directSafetyResults);
     const mdblistDerivedFlat = flattenResults(mdblistDerivedResults);
-    const fallbackSafetyFlat = directSafetyFlat.length ? [] : mdblistDerivedFlat;
+    const directSafetyFamilies = safetyFamiliesIn(directSafetyFlat, type);
+    const fallbackSafetyFlat = mdblistDerivedFlat.filter(item =>
+        shouldKeepDerivedSafety(item, directSafetyFamilies, type)
+    );
     const metaFlat = flattenResults(metaResults);
     const mdblistFlat = flattenResults(mdblistResults);
 
@@ -123,11 +166,7 @@ function finalizeRatings({
         let candidateArrays = order.map(step => sources[step]).filter(Boolean);
 
         if (
-            family === 'Common Sense' ||
-            family === 'Parent Safe' ||
-            family === 'Not Safe' ||
-            family === 'Sexual Violence' ||
-            family === 'Sex & Nudity'
+            SAFETY_FAMILIES.includes(family)
         ) {
             candidateArrays = candidateArrays.map(arr =>
                 Array.isArray(arr)
