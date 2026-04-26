@@ -30,12 +30,12 @@ function normalizeFlag(text) {
 
     if (!raw) return null;
 
-    if (raw.includes('sex') || raw.includes('nudity')) {
-        return 'Sex & Nudity';
-    }
-
     if (raw.includes('sexual violence')) {
         return 'Sexual Violence';
+    }
+
+    if (raw.includes('sex') || raw.includes('nudity')) {
+        return 'Sex & Nudity';
     }
 
     if (raw.includes('violence')) {
@@ -62,14 +62,14 @@ function extractCertification($) {
 
     if (!badge) return null;
 
-    if (/parent safe/i.test(badge)) {
-        logger.debug(`[${PROVIDER_NAME}] Certification: Certified Parent Safe`);
-        return 'safe';
-    }
-
     if (/not parent safe/i.test(badge)) {
         logger.debug(`[${PROVIDER_NAME}] Certification: Not Parent Safe`);
         return 'unsafe';
+    }
+
+    if (/parent safe/i.test(badge)) {
+        logger.debug(`[${PROVIDER_NAME}] Certification: Certified Parent Safe`);
+        return 'safe';
     }
 
     return null;

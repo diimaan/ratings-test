@@ -43,6 +43,8 @@ const config = {
     ratings: userConfig.ratings,
     sources: {
         imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
+        commonSenseBaseUrl: process.env.COMMONSENSE_BASE_URL || 'https://www.commonsensemedia.org',
+        cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
         metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
         rottentomatoesBaseUrl: process.env.ROTTENTOMATOES_BASE_URL || 'https://www.rottentomatoes.com',
     },

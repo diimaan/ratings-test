@@ -30,6 +30,7 @@ test('prioritizes local IMDb and native TMDb over aggregate fallback results', (
         imdbResults: [{ source: 'IMDb (Movie)', value: '8.7/10' }],
         tmdbResults: [{ source: 'TMDb (Movie)', value: '82/100' }],
         malResults: [],
+        directSafetyResults: [],
         mdblistDerivedResults: [],
         metaResults: [
             { source: 'IMDb', value: '7.1/10' },
@@ -58,6 +59,7 @@ test('uses aggregate IMDb fallback when local IMDb result is missing', () => {
         imdbResults: [],
         tmdbResults: [],
         malResults: [],
+        directSafetyResults: [],
         mdblistDerivedResults: [],
         metaResults: [
             { source: 'IMDb', value: '7.1/10' },
@@ -82,6 +84,7 @@ test('uses MDBList IMDb fallback when local and PublicMetaDB results are missing
         imdbResults: [],
         tmdbResults: [],
         malResults: [],
+        directSafetyResults: [],
         mdblistDerivedResults: [],
         metaResults: [],
         mdblistResults: [
@@ -104,6 +107,7 @@ test('honors custom rating order after provider family selection', () => {
         imdbResults: [{ source: 'IMDb (Movie)', value: '8.7/10' }],
         tmdbResults: [{ source: 'TMDb (Movie)', value: '82/100' }],
         malResults: [],
+        directSafetyResults: [],
         mdblistDerivedResults: [{ source: 'Common Sense', value: '16+' }],
         metaResults: [],
         mdblistResults: [{ source: 'MC', value: '73/100' }],
@@ -117,4 +121,32 @@ test('honors custom rating order after provider family selection', () => {
         ratings.map(item => item.source),
         ['Common Sense', 'MC', 'TMDb (Movie)', 'IMDb (Movie)']
     );
+});
+
+test('prioritizes direct safety results over MDBList-derived safety results', () => {
+    const ratings = finalizeRatings({
+        type: 'movie',
+        imdbResults: [],
+        tmdbResults: [],
+        malResults: [],
+        directSafetyResults: [
+            { source: 'Common Sense', value: '13+' },
+            { source: 'Parent Safe', value: '✅ Certified Parent Safe' },
+        ],
+        mdblistDerivedResults: [
+            { source: 'Common Sense', value: '17+' },
+            { source: 'Not Safe', value: '⚠️ Not Safe' },
+        ],
+        metaResults: [],
+        mdblistResults: [],
+        userConfig: userConfig({
+            enabled: ['Common Sense', 'Parent Safe', 'Not Safe'],
+            order: ['Common Sense', 'Parent Safe', 'Not Safe'],
+        }),
+    });
+
+    assert.deepEqual(ratings, [
+        { source: 'Common Sense', value: '13+' },
+        { source: 'Parent Safe', value: '✅ Certified Parent Safe' },
+    ]);
 });

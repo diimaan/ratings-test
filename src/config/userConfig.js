@@ -22,6 +22,13 @@ function normalizeDisplayMode(value, fallback = 'full') {
     return ['auto', 'compact', 'full'].includes(normalized) ? normalized : fallback;
 }
 
+function normalizeSafetySource(value, fallback = 'mdblist_conservative') {
+    const normalized = String(value || fallback).trim().toLowerCase();
+    return ['mdblist_conservative', 'direct', 'hybrid'].includes(normalized)
+        ? normalized
+        : fallback;
+}
+
 function hashValue(value) {
     if (!value) return null;
     return crypto
@@ -98,6 +105,7 @@ function buildUserConfigFromEnv(env = process.env) {
             order: parseCsv(env.RATINGS_ORDER, DEFAULT_RATINGS_ORDER),
             displayMode: normalizeDisplayMode(env.DISPLAY_MODE || 'auto'),
             compactLimit: parsePositiveInt(env.COMPACT_RATINGS_LIMIT, 4),
+            safetySource: normalizeSafetySource(env.SAFETY_SOURCE),
         },
     };
 
@@ -145,6 +153,7 @@ function buildUserConfigFromInput(input = {}, baseConfig) {
             order: normalizeArray(ratings.order, baseConfig.ratings.order),
             displayMode: normalizeDisplayMode(ratings.displayMode, baseConfig.ratings.displayMode),
             compactLimit: parsePositiveInt(ratings.compactLimit, baseConfig.ratings.compactLimit),
+            safetySource: normalizeSafetySource(ratings.safetySource, baseConfig.ratings.safetySource),
         },
     };
 
@@ -157,6 +166,7 @@ module.exports = {
     buildUserConfigFromInput,
     buildCacheFingerprint,
     normalizeDisplayMode,
+    normalizeSafetySource,
     parseCsv,
     parsePositiveInt,
 };

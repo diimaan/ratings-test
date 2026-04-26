@@ -40,6 +40,51 @@ const fallbackAggregateProviders = [
     providers.publicMetaDbProvider,
 ].filter(Boolean);
 
+function safetySourceMode(userConfig = config.userConfig) {
+    return userConfig?.ratings?.safetySource || config.ratings?.safetySource || 'mdblist_conservative';
+}
+
+function shouldUseDirectSafety(userConfig = config.userConfig) {
+    const mode = safetySourceMode(userConfig);
+    return mode === 'direct' || mode === 'hybrid';
+}
+
+function shouldUseMdblistKeywordSafety(ctx, userConfig = config.userConfig) {
+    const mode = safetySourceMode(userConfig);
+    if (mode === 'direct') return false;
+    if (ctx?.isEpisode) return false;
+    return true;
+}
+
+function splitSafetyBlock(result) {
+    if (!result?.value) return [];
+
+    return String(result.value)
+        .split('\n')
+        .map(value => value.trim())
+        .filter(Boolean)
+        .map(value => {
+            if (/parent safe/i.test(value) && !/not parent safe/i.test(value)) {
+                return { source: 'Parent Safe', value };
+            }
+
+            if (/not parent safe|not safe/i.test(value)) {
+                return { source: 'Not Safe', value };
+            }
+
+            if (/sexual violence/i.test(value)) {
+                return { source: 'Sexual Violence', value };
+            }
+
+            if (/sex|nudity/i.test(value)) {
+                return { source: 'Sex & Nudity', value };
+            }
+
+            return null;
+        })
+        .filter(Boolean);
+}
+
 function calculateTTL(releaseDate, numRatings) {
     if (!releaseDate) return config.cache.ttlSeconds;
 
@@ -233,6 +278,37 @@ async function resolveFallbackAggregateRatings(type, rawId, streamInfo, tmdbId, 
     );
 }
 
+async function resolveDirectSafetyRatings(type, rawId, streamInfo, userConfig = config.userConfig) {
+    if (!shouldUseDirectSafety(userConfig)) return [];
+
+    const results = [];
+
+    if (providers.commonSenseProvider) {
+        try {
+            const commonSense = await providers.commonSenseProvider.getBoth(type, rawId, streamInfo);
+            if (commonSense?.ageRating) {
+                results.push(commonSense.ageRating);
+            }
+            if (commonSense?.warnings) {
+                results.push(...splitSafetyBlock(commonSense.warnings));
+            }
+        } catch (err) {
+            logger.warn(`Common Sense direct safety failed for ${rawId}: ${err.message}`);
+        }
+    }
+
+    if (providers.cringeMdbProvider) {
+        try {
+            const cringe = await providers.cringeMdbProvider.getRating(type, rawId, streamInfo);
+            results.push(...splitSafetyBlock(cringe));
+        } catch (err) {
+            logger.warn(`CringeMDB direct safety failed for ${rawId}: ${err.message}`);
+        }
+    }
+
+    return results;
+}
+
 function hasEnabledAggregateResults(results, type, userConfig = config.userConfig) {
     const ratingsConfig = userConfig?.ratings || config.ratings;
 
@@ -310,14 +386,28 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         return result;
     })();
 
+    const directSafetyPromise = (async () => {
+        const startedAt = Date.now();
+        const result = await resolveDirectSafetyRatings(
+            type,
+            rawId,
+            streamInfo,
+            userConfig
+        );
+        timings.directSafety = elapsedMs(startedAt);
+        return result;
+    })();
+
     const [
         imdbResults,
         tmdbResults,
         primaryAggregateResults,
+        directSafetyResults,
     ] = await Promise.all([
         imdbPromise,
         tmdbPromise,
         primaryAggregatePromise,
+        directSafetyPromise,
     ]);
 
     const mdblistResults = Array.isArray(primaryAggregateResults)
@@ -343,7 +433,11 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         ? fallbackAggregateResults
         : [];
 
-    const mdblistDerivedResults = deriveMdblistSafetyResults(mdblistResults);
+    const mdblistDerivedResults = safetySourceMode(userConfig) === 'direct'
+        ? []
+        : deriveMdblistSafetyResults(mdblistResults, {
+            useKeywordWarnings: shouldUseMdblistKeywordSafety(ctx, userConfig),
+        });
 
     const malStartedAt = Date.now();
     const malResults = await resolveMalRatings(
@@ -363,6 +457,7 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         imdbResults,
         tmdbResults,
         malResults,
+        directSafetyResults,
         mdblistDerivedResults,
         metaResults,
         mdblistResults,
@@ -375,6 +470,7 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         `tmdbFind=${timings.tmdbFind ?? 0}ms ` +
         `imdb=${timings.imdb ?? 0}ms ` +
         `tmdb=${timings.tmdbRating ?? 0}ms ` +
+        `directSafety=${timings.directSafety ?? 0}ms ` +
         `mdblist=${timings.mdblist ?? 0}ms ` +
         `pmdb=${timings.publicMetaDb ?? 0}ms ` +
         `mal=${timings.mal ?? 0}ms ` +

@@ -10,11 +10,11 @@ const {
 } = require('./ratingHelpers');
 
 const RATING_PRIORITY = {
-    'Common Sense': ['MDBDERIVED'],
-    'Parent Safe': ['MDBDERIVED'],
-    'Not Safe': ['MDBDERIVED'],
-    'Sexual Violence': ['MDBDERIVED'],
-    'Sex & Nudity': ['MDBDERIVED'],
+    'Common Sense': ['DIRECT', 'MDBDERIVED'],
+    'Parent Safe': ['DIRECT', 'MDBDERIVED'],
+    'Not Safe': ['DIRECT', 'MDBDERIVED'],
+    'Sexual Violence': ['DIRECT', 'MDBDERIVED'],
+    'Sex & Nudity': ['DIRECT', 'MDBDERIVED'],
     IMDb: ['LOCAL', 'PMDB', 'MDBLIST'],
     TMDb: ['LOCAL', 'PMDB', 'MDBLIST'],
     MAL: ['JIKAN_ID', 'MDBLIST', 'PMDB'],
@@ -32,6 +32,7 @@ function finalizeRatings({
     imdbResults,
     tmdbResults,
     malResults,
+    directSafetyResults,
     mdblistDerivedResults,
     metaResults,
     mdblistResults,
@@ -40,7 +41,9 @@ function finalizeRatings({
     const imdbFlat = flattenResults(imdbResults);
     const tmdbFlat = flattenResults(tmdbResults);
     const malFlat = flattenResults(malResults);
+    const directSafetyFlat = flattenResults(directSafetyResults);
     const mdblistDerivedFlat = flattenResults(mdblistDerivedResults);
+    const fallbackSafetyFlat = directSafetyFlat.length ? [] : mdblistDerivedFlat;
     const metaFlat = flattenResults(metaResults);
     const mdblistFlat = flattenResults(mdblistResults);
 
@@ -48,19 +51,24 @@ function finalizeRatings({
 
     const candidatesByFamily = {
         'Common Sense': {
-            MDBDERIVED: mdblistDerivedFlat,
+            DIRECT: directSafetyFlat,
+            MDBDERIVED: fallbackSafetyFlat,
         },
         'Parent Safe': {
-            MDBDERIVED: mdblistDerivedFlat,
+            DIRECT: directSafetyFlat,
+            MDBDERIVED: fallbackSafetyFlat,
         },
         'Not Safe': {
-            MDBDERIVED: mdblistDerivedFlat,
+            DIRECT: directSafetyFlat,
+            MDBDERIVED: fallbackSafetyFlat,
         },
         'Sexual Violence': {
-            MDBDERIVED: mdblistDerivedFlat,
+            DIRECT: directSafetyFlat,
+            MDBDERIVED: fallbackSafetyFlat,
         },
         'Sex & Nudity': {
-            MDBDERIVED: mdblistDerivedFlat,
+            DIRECT: directSafetyFlat,
+            MDBDERIVED: fallbackSafetyFlat,
         },
         IMDb: {
             LOCAL: imdbFlat,

@@ -71,3 +71,21 @@ test('derives sex and nudity warning from MDBList exact sex keyword', () => {
         { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
     ]);
 });
+
+test('can suppress MDBList keyword-derived warnings for episode safety', () => {
+    const derived = deriveMdblistSafetyResults([{
+        _mdblist: {
+            age: {
+                commonSense: 17,
+                parentalNudity: 2,
+            },
+            keywords: ['female-nudity', 'nudity'],
+        },
+    }], {
+        useKeywordWarnings: false,
+    });
+
+    assert.deepEqual(derived, [
+        { source: 'Common Sense', value: '17+' },
+    ]);
+});

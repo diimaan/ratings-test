@@ -91,7 +91,6 @@ function mapLabelToCategory(label) {
 function collectWarningCategories($) {
     const categories = new Set();
 
-    // 1. Known labels
     $('.rating__label').each((_, el) => {
         const label = cleanText($(el).text());
         const mapped = mapLabelToCategory(label);
@@ -101,7 +100,6 @@ function collectWarningCategories($) {
         if (mapped) categories.add(mapped);
     });
 
-    // 2. Heading fallback
     $('h2, h3, h4').each((_, el) => {
         const text = cleanText($(el).text());
         const mapped = mapLabelToCategory(text);
@@ -111,28 +109,6 @@ function collectWarningCategories($) {
             categories.add(mapped);
         }
     });
-
-    // 3. Body fallback
-    if (categories.size === 0) {
-        const bodyText = cleanText($('body').text()).toLowerCase();
-
-        logger.debug(`[CSM] No categories found via DOM, using body fallback`);
-
-        const possible = [
-            'sex',
-            'nudity',
-        ];
-
-        for (const word of possible) {
-            if (bodyText.includes(word)) {
-                const mapped = mapLabelToCategory(word);
-
-                logger.debug(`[CSM] Body match: "${word}" → "${mapped}"`);
-
-                if (mapped) categories.add(mapped);
-            }
-        }
-    }
 
     logger.debug(`[CSM] Final collected categories: ${JSON.stringify([...categories])}`);
 

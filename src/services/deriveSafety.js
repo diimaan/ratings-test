@@ -47,7 +47,8 @@ function normalizeSafetyCertification(value) {
     return null;
 }
 
-function deriveMdblistSafetyResults(mdblistResults) {
+function deriveMdblistSafetyResults(mdblistResults, options = {}) {
+    const useKeywordWarnings = options.useKeywordWarnings !== false;
     const mdblistFlat = flattenResults(mdblistResults);
     const metadata = findMdblistMetadata(mdblistFlat);
 
@@ -129,11 +130,11 @@ function deriveMdblistSafetyResults(mdblistResults) {
         /\blesbian-sex-scene\b/i,
     ];
 
-    const hasSexualViolence = keywords.some(keyword =>
+    const hasSexualViolence = useKeywordWarnings && keywords.some(keyword =>
         sexualViolencePatterns.some(pattern => pattern.test(keyword))
     );
 
-    const hasSexAndNudityKeyword = keywords.some(keyword =>
+    const hasSexAndNudityKeyword = useKeywordWarnings && keywords.some(keyword =>
         sexNudityPatterns.some(pattern => pattern.test(keyword))
     );
 
@@ -174,6 +175,7 @@ function deriveMdblistSafetyResults(mdblistResults) {
         `(commonSense=${Number.isFinite(commonSense) && commonSense > 0 ? commonSense : 'none'}, ` +
         `csmAvailable=${metadata?.flags?.hasCommonSenseData === true ? 'true' : 'false'}, ` +
         `certification=${safetyCertification || 'none'}, ` +
+        `keywordWarnings=${useKeywordWarnings ? 'on' : 'off'}, ` +
         `keywords=${keywords.length})`
     );
     logger.debug(`[MDBSafety] Derived safety results: ${JSON.stringify(results)}`);
