@@ -106,6 +106,7 @@ function deriveMdblistSafetyResults(mdblistResults) {
     ];
 
     const sexNudityPatterns = [
+        /\bsex\b/i,
         /\bsex-scene\b/i,
         /\bsex-scenes\b/i,
         /\bgraphic-sex-scene\b/i,

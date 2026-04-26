@@ -329,7 +329,10 @@ async function fetchByTmdb(type, tmdbId, providerConfig) {
     const res = await axios.get(url, {
         timeout: config.http.requestTimeoutMs || 12000,
         headers: { 'User-Agent': config.userAgent },
-        params: { apikey: providerConfig.apiKey },
+        params: {
+            apikey: providerConfig.apiKey,
+            append_to_response: 'keyword',
+        },
         validateStatus: status => status >= 200 && status < 500,
     });
 
@@ -365,7 +368,10 @@ async function fetchByImdb(type, imdbId, providerConfig) {
     const res = await axios.get(url, {
         timeout: config.http.requestTimeoutMs || 12000,
         headers: { 'User-Agent': config.userAgent },
-        params: { apikey: providerConfig.apiKey },
+        params: {
+            apikey: providerConfig.apiKey,
+            append_to_response: 'keyword',
+        },
         validateStatus: status => status >= 200 && status < 500,
     });
 

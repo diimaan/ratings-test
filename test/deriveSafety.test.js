@@ -53,3 +53,21 @@ test('normalizes explicit unsafe safety certification', () => {
     assert.equal(normalizeSafetyCertification('Certified Parent Safe'), 'safe');
     assert.equal(normalizeSafetyCertification(''), null);
 });
+
+test('derives sex and nudity warning from MDBList exact sex keyword', () => {
+    const derived = deriveMdblistSafetyResults([{
+        _mdblist: {
+            age: {
+                commonSense: 13,
+                parentalNudity: 2,
+            },
+            keywords: ['period-drama', 'sex', 'railroad-worker'],
+        },
+    }]);
+
+    assert.deepEqual(derived, [
+        { source: 'Common Sense', value: '13+' },
+        { source: 'Not Safe', value: '⚠️ Not Safe' },
+        { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
+    ]);
+});
