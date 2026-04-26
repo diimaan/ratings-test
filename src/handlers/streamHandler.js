@@ -1,6 +1,7 @@
 const ratingService = require('../services/ratingService');
 const logger = require('../utils/logger');
 const config = require('../config');
+const crypto = require('crypto');
 const {
     getCompactLabel,
     getFullLabel,
@@ -17,21 +18,37 @@ const TOP_PRIORITY_SOURCES = new Set([
 ]);
 
 const TV_USER_AGENT_PATTERNS = [
-    /android tv/i,
-    /aft[a-z0-9]*/i,
-    /fire tv/i,
-    /smart-tv/i,
-    /smarttv/i,
-    /tizen/i,
-    /webos/i,
-    /netcast/i,
-    /crkey/i,
-    /chromecast/i,
-    /googletv/i,
-    /google tv/i,
-    /appletv/i,
-    /apple tv/i,
-    /roku/i,
+    ['android-tv', /android tv/i],
+    ['fire-tv', /aft[a-z0-9]*|fire tv/i],
+    ['smart-tv', /smart-tv|smarttv/i],
+    ['tizen', /tizen/i],
+    ['webos', /webos/i],
+    ['netcast', /netcast/i],
+    ['chromecast', /crkey|chromecast/i],
+    ['google-tv', /googletv|google tv/i],
+    ['apple-tv', /appletv|apple tv/i],
+    ['roku', /roku/i],
+];
+
+const MOBILE_USER_AGENT_PATTERNS = [
+    ['iphone', /iphone/i],
+    ['ipad', /ipad/i],
+    ['android-mobile', /android(?! tv).*mobile/i],
+    ['android', /android(?! tv)/i],
+];
+
+const DESKTOP_USER_AGENT_PATTERNS = [
+    ['macos', /macintosh|mac os x/i],
+    ['windows', /windows nt/i],
+    ['linux-desktop', /x11|linux x86_64|linux aarch64/i],
+];
+
+const WEB_USER_AGENT_PATTERNS = [
+    ['stremio', /stremio/i],
+    ['chrome', /chrome|chromium|crios/i],
+    ['safari', /safari/i],
+    ['firefox', /firefox|fxios/i],
+    ['edge', /edg\//i],
 ];
 
 function isRogerEbertStars(value) {
@@ -230,14 +247,75 @@ function formatFullRatings(ratings) {
 }
 
 function isTvLikeUserAgent(userAgent) {
+    return classifyUserAgent(userAgent).family === 'tv';
+}
+
+function matchingSignals(patterns, text) {
+    return patterns
+        .filter(([, pattern]) => pattern.test(text))
+        .map(([signal]) => signal);
+}
+
+function classifyUserAgent(userAgent) {
     const text = String(userAgent || '').trim();
-    if (!text) return false;
-    return TV_USER_AGENT_PATTERNS.some(pattern => pattern.test(text));
+    if (!text) {
+        return { family: 'missing', signals: [] };
+    }
+
+    const tvSignals = matchingSignals(TV_USER_AGENT_PATTERNS, text);
+    if (tvSignals.length) {
+        return { family: 'tv', signals: tvSignals };
+    }
+
+    const mobileSignals = matchingSignals(MOBILE_USER_AGENT_PATTERNS, text);
+    if (mobileSignals.length) {
+        return { family: 'mobile', signals: mobileSignals };
+    }
+
+    const desktopSignals = matchingSignals(DESKTOP_USER_AGENT_PATTERNS, text);
+    if (desktopSignals.length) {
+        return { family: 'desktop', signals: desktopSignals };
+    }
+
+    const webSignals = matchingSignals(WEB_USER_AGENT_PATTERNS, text);
+    if (webSignals.length) {
+        return { family: 'web', signals: webSignals };
+    }
+
+    return { family: 'unknown', signals: [] };
 }
 
 function userAgentFamily(userAgent) {
-    if (!userAgent) return 'missing';
-    return isTvLikeUserAgent(userAgent) ? 'tv' : 'non-tv';
+    return classifyUserAgent(userAgent).family;
+}
+
+function uaHash(userAgent) {
+    const text = String(userAgent || '').trim();
+    if (!text) return null;
+
+    return crypto
+        .createHash('sha256')
+        .update(text)
+        .digest('hex')
+        .slice(0, 12);
+}
+
+function userAgentDiagnostics(userAgent) {
+    const mode = String(process.env.UA_DIAGNOSTICS || 'off').trim().toLowerCase();
+    if (mode === 'off' || !mode) return '';
+
+    const text = String(userAgent || '').trim();
+    if (!text) return '';
+
+    if (mode === 'raw') {
+        return `, uaRaw=${JSON.stringify(text)}`;
+    }
+
+    if (mode === 'hash') {
+        return `, uaHash=${uaHash(text)}`;
+    }
+
+    return '';
 }
 
 function resolveDisplayMode(userConfig = config.userConfig, requestHeaders = {}) {
@@ -249,9 +327,13 @@ function resolveDisplayMode(userConfig = config.userConfig, requestHeaders = {})
     }
 
     const userAgent = requestHeaders['user-agent'] || requestHeaders['User-Agent'];
-    if (!userAgent) return 'compact';
+    const ua = classifyUserAgent(userAgent);
 
-    return isTvLikeUserAgent(userAgent) ? 'compact' : 'full';
+    if (ua.family === 'tv' || ua.family === 'unknown' || ua.family === 'missing') {
+        return 'compact';
+    }
+
+    return 'full';
 }
 
 function formatRatingsCard(ratings, type, userConfig = config.userConfig, requestHeaders = {}) {
@@ -284,10 +366,13 @@ async function streamHandler({ type, id, userConfig, requestHeaders = {} }) {
     const displayMode = resolveDisplayMode(activeUserConfig, requestHeaders);
     const configuredDisplayMode = activeUserConfig?.ratings?.displayMode || 'auto';
     const requestUserAgent = requestHeaders['user-agent'] || requestHeaders['User-Agent'];
+    const ua = classifyUserAgent(requestUserAgent);
+    const uaSignals = ua.signals.length ? ua.signals.join(',') : 'none';
 
     logger.info(
         `Resolved display mode ${displayMode} for ${id} ` +
-        `(configured=${configuredDisplayMode}, uaFamily=${userAgentFamily(requestUserAgent)})`
+        `(configured=${configuredDisplayMode}, uaFamily=${ua.family}, uaSignals=${uaSignals}` +
+        `${userAgentDiagnostics(requestUserAgent)})`
     );
 
     const description = formatRatingsCard(ratings, type, activeUserConfig, requestHeaders);
@@ -321,3 +406,5 @@ module.exports = streamHandler;
 module.exports.resolveDisplayMode = resolveDisplayMode;
 module.exports.isTvLikeUserAgent = isTvLikeUserAgent;
 module.exports.userAgentFamily = userAgentFamily;
+module.exports.classifyUserAgent = classifyUserAgent;
+module.exports.uaHash = uaHash;

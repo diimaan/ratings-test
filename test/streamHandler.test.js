@@ -14,6 +14,8 @@ const streamHandler = require('../src/handlers/streamHandler');
 const {
     resolveDisplayMode,
     userAgentFamily,
+    classifyUserAgent,
+    uaHash,
 } = streamHandler;
 
 function userConfig(displayMode = 'compact', limit = 4) {
@@ -119,13 +121,20 @@ test('display mode full and compact settings override user agent detection', () 
 });
 
 test('display mode auto uses TV-like user agents for compact output', () => {
-    assert.equal(resolveDisplayMode(userConfig('auto'), {
-        'user-agent': 'Mozilla/5.0 (Linux; Android TV 12; Chromecast) Stremio/1.6.12',
-    }), 'compact');
+    const tvUserAgents = [
+        'Mozilla/5.0 (Linux; Android TV 12; Chromecast) Stremio/1.6.12',
+        'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0)',
+        'Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36',
+        'Mozilla/5.0 (Linux; Android 11; AFTMM) AppleWebKit/537.36',
+        'Mozilla/5.0 (AppleTV; CPU OS 17_0 like Mac OS X)',
+        'Roku/DVP-12.5',
+    ];
 
-    assert.equal(resolveDisplayMode(userConfig('auto'), {
-        'user-agent': 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0)',
-    }), 'compact');
+    for (const userAgent of tvUserAgents) {
+        assert.equal(resolveDisplayMode(userConfig('auto'), {
+            'user-agent': userAgent,
+        }), 'compact');
+    }
 });
 
 test('display mode auto uses full output for desktop user agents', () => {
@@ -134,12 +143,49 @@ test('display mode auto uses full output for desktop user agents', () => {
     }), 'full');
 });
 
+test('display mode auto uses full output for mobile and browser user agents', () => {
+    const userAgents = [
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36',
+        'Mozilla/5.0 AppleWebKit/537.36 Chrome/123.0 Safari/537.36',
+    ];
+
+    for (const userAgent of userAgents) {
+        assert.equal(resolveDisplayMode(userConfig('auto'), {
+            'user-agent': userAgent,
+        }), 'full');
+    }
+});
+
 test('display mode auto falls back to compact when user agent is missing', () => {
     assert.equal(resolveDisplayMode(userConfig('auto'), {}), 'compact');
 });
 
-test('classifies user agent family without logging raw user agent strings', () => {
+test('display mode auto falls back to compact for unknown user agents', () => {
+    assert.equal(resolveDisplayMode(userConfig('auto'), {
+        'user-agent': 'CustomAddonClient/1.0',
+    }), 'compact');
+});
+
+test('classifies user agent family and signals without logging raw user agent strings', () => {
     assert.equal(userAgentFamily('Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12'), 'tv');
-    assert.equal(userAgentFamily('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'), 'non-tv');
+    assert.equal(userAgentFamily('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'), 'desktop');
+    assert.equal(userAgentFamily('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)'), 'mobile');
+    assert.equal(userAgentFamily('Mozilla/5.0 AppleWebKit/537.36 Chrome/123.0 Safari/537.36'), 'web');
+    assert.equal(userAgentFamily('CustomAddonClient/1.0'), 'unknown');
     assert.equal(userAgentFamily(''), 'missing');
+
+    assert.deepEqual(classifyUserAgent('Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12'), {
+        family: 'tv',
+        signals: ['android-tv'],
+    });
+});
+
+test('hashes user agents for optional diagnostics without exposing raw values', () => {
+    const first = uaHash('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+    const second = uaHash('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
+
+    assert.equal(first, second);
+    assert.equal(first.length, 12);
+    assert.notEqual(first, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
 });
