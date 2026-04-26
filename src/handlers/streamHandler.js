@@ -190,6 +190,8 @@ function buildWarningLines(ratings) {
         lines.push(stripScale(notSafe.value, notSafe.source));
     } else if (parentSafe) {
         lines.push(stripScale(parentSafe.value, parentSafe.source));
+    } else if (sexualWarnings.length > 0) {
+        lines.push('⚠️ Not Parent Safe');
     }
 
     for (const warning of sexualWarnings) {

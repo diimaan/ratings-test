@@ -289,7 +289,7 @@ async function resolveDirectSafetyRatings(type, rawId, streamInfo, userConfig = 
             if (commonSense?.ageRating) {
                 results.push(commonSense.ageRating);
             }
-            if (commonSense?.warnings) {
+            if (commonSense?.warnings && !streamInfo?.isEpisode) {
                 results.push(...splitSafetyBlock(commonSense.warnings));
             }
         } catch (err) {

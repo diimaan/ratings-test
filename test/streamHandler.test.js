@@ -108,6 +108,52 @@ test('full output places positive parent safety verdict after main ratings', asy
     }
 });
 
+test('full output adds not parent safe verdict when sexual warning has no explicit safety verdict', async () => {
+    const originalGetRatings = ratingService.getRatings;
+    ratingService.getRatings = async () => [
+        { source: 'Common Sense', value: '15+' },
+        { source: 'IMDb (Movie)', value: '7.1/10' },
+        { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
+    ];
+
+    try {
+        const payload = await streamHandler({
+            type: 'movie',
+            id: 'tt0133093',
+            userConfig: userConfig('full', 4),
+        });
+
+        const description = payload.streams[0].description;
+        assert.match(description, /👪 15\+/);
+        assert.match(description, /⚠️ Not Parent Safe\n🫣 Sex & Nudity/);
+    } finally {
+        ratingService.getRatings = originalGetRatings;
+    }
+});
+
+test('compact output adds not parent safe verdict when sexual warning has no explicit safety verdict', async () => {
+    const originalGetRatings = ratingService.getRatings;
+    ratingService.getRatings = async () => [
+        { source: 'Common Sense', value: '15+' },
+        { source: 'IMDb (Movie)', value: '7.1/10' },
+        { source: 'Sex & Nudity', value: '🫣 Sex & Nudity' },
+    ];
+
+    try {
+        const payload = await streamHandler({
+            type: 'movie',
+            id: 'tt0133093',
+            userConfig: userConfig('compact', 4),
+        });
+
+        const description = payload.streams[0].description;
+        assert.match(description, /👪 15\+/);
+        assert.match(description, /⚠️ Not Parent Safe\n🫣 Sex & Nudity/);
+    } finally {
+        ratingService.getRatings = originalGetRatings;
+    }
+});
+
 test('display mode full and compact settings override user agent detection', () => {
     const tvHeaders = {
         'user-agent': 'Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12',
