@@ -44,7 +44,6 @@ const DESKTOP_USER_AGENT_PATTERNS = [
 ];
 
 const WEB_USER_AGENT_PATTERNS = [
-    ['stremio', /stremio/i],
     ['chrome', /chrome|chromium|crios/i],
     ['safari', /safari/i],
     ['firefox', /firefox|fxios/i],
@@ -272,14 +271,14 @@ function classifyUserAgent(userAgent) {
         return { family: 'mobile', signals: mobileSignals };
     }
 
-    const desktopSignals = matchingSignals(DESKTOP_USER_AGENT_PATTERNS, text);
-    if (desktopSignals.length) {
-        return { family: 'desktop', signals: desktopSignals };
-    }
-
     const webSignals = matchingSignals(WEB_USER_AGENT_PATTERNS, text);
     if (webSignals.length) {
         return { family: 'web', signals: webSignals };
+    }
+
+    const desktopSignals = matchingSignals(DESKTOP_USER_AGENT_PATTERNS, text);
+    if (desktopSignals.length) {
+        return { family: 'desktop', signals: desktopSignals };
     }
 
     return { family: 'unknown', signals: [] };

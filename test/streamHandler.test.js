@@ -139,7 +139,7 @@ test('display mode auto uses TV-like user agents for compact output', () => {
 
 test('display mode auto uses full output for desktop user agents', () => {
     assert.equal(resolveDisplayMode(userConfig('auto'), {
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/123',
+        'user-agent': 'StremioShell/4.4.0 (Macintosh; Intel Mac OS X 10_15_7)',
     }), 'full');
 });
 
@@ -169,7 +169,8 @@ test('display mode auto falls back to compact for unknown user agents', () => {
 
 test('classifies user agent family and signals without logging raw user agent strings', () => {
     assert.equal(userAgentFamily('Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12'), 'tv');
-    assert.equal(userAgentFamily('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'), 'desktop');
+    assert.equal(userAgentFamily('StremioShell/4.4.0 (Macintosh; Intel Mac OS X 10_15_7)'), 'desktop');
+    assert.equal(userAgentFamily('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Firefox/125.0'), 'web');
     assert.equal(userAgentFamily('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)'), 'mobile');
     assert.equal(userAgentFamily('Mozilla/5.0 AppleWebKit/537.36 Chrome/123.0 Safari/537.36'), 'web');
     assert.equal(userAgentFamily('CustomAddonClient/1.0'), 'unknown');
