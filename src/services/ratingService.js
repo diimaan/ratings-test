@@ -357,6 +357,8 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         logger.info(`[Episode Mode] S${ctx.season}E${ctx.episode}`);
     }
 
+    logger.info(`Resolved safety source ${safetySourceMode(userConfig)} for ${rawId}`);
+
     const imdbPromise = (async () => {
         const startedAt = Date.now();
         const result = await resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId);

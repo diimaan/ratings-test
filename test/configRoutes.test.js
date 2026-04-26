@@ -115,6 +115,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
             order: ['TMDb (Movie)', 'IMDb (Movie)'],
             displayMode: 'compact',
             compactLimit: 2,
+            safetySource: 'hybrid',
         },
     };
 
@@ -151,6 +152,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
     assert.equal(retrieved.response.status, 200);
     assert.equal(retrieved.body.config.providers.tmdb.apiKey, 'tmdb-user-key');
     assert.equal(retrieved.body.config.providers.mdblist.apiKey, 'mdblist-user-key');
+    assert.equal(retrieved.body.config.ratings.safetySource, 'hybrid');
 
     const updated = await requestJson(baseUrl, `/api/config/${configId}`, {
         method: 'PUT',
@@ -173,6 +175,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
     assert.equal(updated.response.status, 200);
     assert.equal(updated.body.config.id, configId);
     assert.equal(updated.body.config.ratings.displayMode, 'full');
+    assert.equal(updated.body.config.ratings.safetySource, 'hybrid');
     assert.equal(updated.body.config.providers.tmdb.apiKey, undefined);
 
     const deleted = await requestJson(baseUrl, `/api/config/${configId}`, {

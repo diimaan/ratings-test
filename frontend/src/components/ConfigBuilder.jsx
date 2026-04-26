@@ -9,6 +9,21 @@ const providerDefaults = {
   publicmetadb: { apiKey: '', apiUrl: 'https://publicmetadb.com' },
 };
 
+const safetySourceOptions = [
+  {
+    value: 'mdblist_conservative',
+    label: 'MDBList Conservative',
+  },
+  {
+    value: 'hybrid',
+    label: 'Hybrid',
+  },
+  {
+    value: 'direct',
+    label: 'Direct',
+  },
+];
+
 const fallbackRatings = [
   'Common Sense',
   'Parent Safe',
@@ -44,6 +59,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   const [providers, setProviders] = useState(providerDefaults);
   const [displayMode, setDisplayMode] = useState('auto');
   const [compactLimit, setCompactLimit] = useState(4);
+  const [safetySource, setSafetySource] = useState('mdblist_conservative');
   const [enabledRatings, setEnabledRatings] = useState(fallbackRatings);
   const [ratingOrder, setRatingOrder] = useState(fallbackRatings);
   const [manifestUrl, setManifestUrl] = useState(absoluteUrl(defaultManifestPath));
@@ -90,6 +106,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         });
         setDisplayMode(data.ratings?.displayMode || 'auto');
         setCompactLimit(data.ratings?.compactLimit || 4);
+        setSafetySource(data.ratings?.safetySource || 'mdblist_conservative');
         setEnabledRatings(data.ratings?.enabled || fallbackRatings);
         setRatingOrder(uniqueOrderedRatings(data));
       })
@@ -169,6 +186,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
       });
       setDisplayMode(data.config.ratings?.displayMode || 'auto');
       setCompactLimit(data.config.ratings?.compactLimit || 4);
+      setSafetySource(data.config.ratings?.safetySource || 'mdblist_conservative');
       setEnabledRatings(data.config.ratings?.enabled || fallbackRatings);
       setRatingOrder(data.config.ratings?.order || fallbackRatings);
     }
@@ -214,6 +232,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
             order: ratingOrder,
             displayMode,
             compactLimit,
+            safetySource,
           },
         }),
       });
@@ -401,6 +420,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         order: ratingOrder,
         displayMode,
         compactLimit,
+        safetySource,
       },
     },
   });
@@ -446,6 +466,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
       });
       setDisplayMode(imported.ratings?.displayMode || 'auto');
       setCompactLimit(imported.ratings?.compactLimit || 4);
+      setSafetySource(imported.ratings?.safetySource || 'mdblist_conservative');
       setEnabledRatings(imported.ratings?.enabled || fallbackRatings);
       setRatingOrder(imported.ratings?.order || fallbackRatings);
       toast.success('Config backup imported');
@@ -550,6 +571,25 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
                 className="rounded-lg border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
               />
             </label>
+          </div>
+
+          <div>
+            <span className="mb-2 block text-sm font-semibold text-gray-200">Safety source</span>
+            <div className="grid overflow-hidden rounded-lg border border-white/10 md:grid-cols-3">
+              {safetySourceOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSafetySource(option.value)}
+                  className={`px-4 py-3 text-sm font-semibold ${safetySource === option.value ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-gray-300'}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <span className="mt-2 block text-xs text-gray-400">
+              Hybrid tests direct Common Sense/Cringe results first and falls back to MDBList-derived safety when direct data is unavailable.
+            </span>
           </div>
 
           <div>
