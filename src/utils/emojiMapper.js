@@ -50,7 +50,22 @@ function getFullLabel(source) {
     return map[source] || `⭐ ${source}`;
 }
 
+function getWarningLabel(source) {
+    const warningLabels = {
+        'Parent Safe': '✅ Certified Parent Safe',
+        'Not Safe': '⚠️ Not Safe',
+        'Sexual Violence': '💔 Sexual Violence',
+        'Sex & Nudity': '🫣 Sex & Nudity',
+        'Violence & Scariness': '🔪 Violence & Scariness',
+        'Language': '🗣️ Language',
+        'Drugs Usage': '💊 Drugs Usage',
+    };
+
+    return warningLabels[source] || getFullLabel(source);
+}
+
 module.exports = {
     getCompactLabel,
     getFullLabel,
+    getWarningLabel,
 };
