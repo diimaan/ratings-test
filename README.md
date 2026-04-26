@@ -25,6 +25,7 @@ Implemented:
 - Configuration-required base manifest for BYOB hosting
 - Compact and full display modes
 - Rating enable/disable and ordering controls
+- Server-controlled Hybrid Conservative safety policy
 - SQLite config storage
 - Redis result caching
 - LMDB-backed IMDb episode lookup foundation
@@ -72,11 +73,14 @@ LMDB_DATA_DIR="/app/data/lmdb"
 CONFIG_ENCRYPTION_SECRET="CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
 IMDB_DATASET_MODE=required
 IMDB_DATA_DIR="/app/data/imdb"
+SAFETY_SOURCE=hybrid
 ```
 
 `CONFIG_ENCRYPTION_SECRET` must remain stable. If it changes, existing encrypted provider keys cannot be decrypted.
 
 This addon runs in BYOB mode. The base `/manifest.json` exists only to send users through configuration, and stream results require a saved UUID config.
+
+`SAFETY_SOURCE` is intentionally server-controlled, not a public user setting. Keep `hybrid` for production. `direct` and `mdblist_conservative` are retained for debugging provider behaviour.
 
 ## Local Docker Desktop
 

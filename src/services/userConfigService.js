@@ -3,6 +3,7 @@ const config = require('../config');
 const sqliteStore = require('../storage/sqliteStore');
 const {
     buildUserConfigFromInput,
+    buildCacheFingerprint,
 } = require('../config/userConfig');
 const {
     validateUserConfigProviders,
@@ -15,12 +16,27 @@ async function getDefaultUserConfig() {
     return config.userConfig;
 }
 
+function applyServerSafetySource(userConfig) {
+    if (!userConfig) return userConfig;
+
+    const normalized = {
+        ...userConfig,
+        ratings: {
+            ...userConfig.ratings,
+            safetySource: config.userConfig.ratings.safetySource,
+        },
+    };
+
+    normalized.cacheKey = buildCacheFingerprint(normalized);
+    return normalized;
+}
+
 async function getUserConfigById(configId) {
     if (!configId || configId === 'default') {
         return getDefaultUserConfig();
     }
 
-    return sqliteStore.getUserConfig(configId);
+    return applyServerSafetySource(sqliteStore.getUserConfig(configId));
 }
 
 function publicConfigView(userConfig) {
@@ -100,10 +116,10 @@ async function createUserConfig(input = {}) {
     assertValidPassword(input.password);
 
     const id = crypto.randomUUID();
-    const userConfig = buildUserConfigFromInput({
+    const userConfig = applyServerSafetySource(buildUserConfigFromInput({
         ...input,
         id,
-    }, config.userConfig);
+    }, config.userConfig));
 
     await validateUserConfigProviders(userConfig);
     sqliteStore.saveUserConfig(userConfig, hashPassword(input.password));
@@ -118,15 +134,15 @@ async function getUserConfigForPassword(configId, password) {
         throw err;
     }
 
-    return record.config;
+    return applyServerSafetySource(record.config);
 }
 
 async function updateUserConfig(configId, input = {}) {
     const existing = await getUserConfigForPassword(configId, input.password);
-    const userConfig = buildUserConfigFromInput({
+    const userConfig = applyServerSafetySource(buildUserConfigFromInput({
         ...input,
         id: existing.id,
-    }, config.userConfig);
+    }, config.userConfig));
 
     await validateUserConfigProviders(userConfig);
     sqliteStore.saveUserConfig(userConfig);

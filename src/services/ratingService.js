@@ -41,7 +41,7 @@ const fallbackAggregateProviders = [
 ].filter(Boolean);
 
 function safetySourceMode(userConfig = config.userConfig) {
-    return userConfig?.ratings?.safetySource || config.ratings?.safetySource || 'mdblist_conservative';
+    return userConfig?.ratings?.safetySource || config.ratings?.safetySource || 'hybrid';
 }
 
 function shouldUseDirectSafety(userConfig = config.userConfig) {

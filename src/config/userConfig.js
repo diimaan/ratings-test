@@ -22,7 +22,7 @@ function normalizeDisplayMode(value, fallback = 'full') {
     return ['auto', 'compact', 'full'].includes(normalized) ? normalized : fallback;
 }
 
-function normalizeSafetySource(value, fallback = 'mdblist_conservative') {
+function normalizeSafetySource(value, fallback = 'hybrid') {
     const normalized = String(value || fallback).trim().toLowerCase();
     return ['mdblist_conservative', 'direct', 'hybrid'].includes(normalized)
         ? normalized

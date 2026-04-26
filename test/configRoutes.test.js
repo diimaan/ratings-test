@@ -115,7 +115,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
             order: ['TMDb (Movie)', 'IMDb (Movie)'],
             displayMode: 'compact',
             compactLimit: 2,
-            safetySource: 'hybrid',
+            safetySource: 'direct',
         },
     };
 

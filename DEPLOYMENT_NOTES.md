@@ -36,6 +36,7 @@ The local setup avoids those production assumptions and instead uses:
 - SQLite stores user config and structured app data
 - Provider keys inside saved user configs are encrypted with `CONFIG_ENCRYPTION_SECRET`
 - Keep `CONFIG_ENCRYPTION_SECRET` stable and backed up; changing it will make existing encrypted provider keys unreadable
+- `SAFETY_SOURCE=hybrid` is the production default; `direct` and `mdblist_conservative` are server-side debug modes, not normal user-facing choices
 - LMDB stores local IMDb lookup data derived from the mounted IMDb TSV datasets
 - Redis should not be used as the primary IMDb dataset store
 - IMDb dataset path is mounted read-only at `/app/data/imdb`

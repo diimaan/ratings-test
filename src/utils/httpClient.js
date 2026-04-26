@@ -1,13 +1,13 @@
 const axios = require('axios');
 const config = require('../config');
-const logger = require('./logger'); 
+const logger = require('./logger');
 
 const instance = axios.create({
     timeout: config.http.requestTimeoutMs || 10000,
     headers: {
         'User-Agent': config.userAgent,
-        'Accept-Language': 'en-US,en;q=0.9', 
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8', 
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
@@ -26,16 +26,16 @@ async function getPage(url, providerName, requestConfig = {}) {
 
         if (response.status !== 200) {
             if (response.status === 404) {
-                logger.warn(`[${providerName}] HTTP GET failed: ${response.status} Not Found - ${url}`);
+                logger.debug(`[${providerName}] HTTP GET failed: ${response.status} Not Found - ${url}`);
             } else {
                 logger.warn(`[${providerName}] HTTP GET failed: ${response.status} ${response.statusText} - ${url}`);
             }
         }
 
-        return response; 
+        return response;
     } catch (error) {
         logger.error(`[${providerName}] Network Error for ${url}: ${error.message}`);
-        return null; 
+        return null;
     }
 }
 
