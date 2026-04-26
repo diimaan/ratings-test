@@ -39,9 +39,9 @@ test('loads IMDb ratings and episode mappings into LMDB for episode lookup', asy
         path.join(imdbDir, 'title.ratings.tsv.gz'),
         [
             'tconst\taverageRating\tnumVotes',
-            'ttshow0001\t8.0\t1000',
-            'ttepisode01\t9.3\t250',
-            'ttepisode02\t7.4\t150',
+            'tt1000001\t8.0\t1000',
+            'tt2000001\t9.3\t250',
+            'tt2000002\t7.4\t150',
             'ttbad00001\t\\N\t10',
             '',
         ].join('\n')
@@ -51,29 +51,38 @@ test('loads IMDb ratings and episode mappings into LMDB for episode lookup', asy
         path.join(imdbDir, 'title.episode.tsv.gz'),
         [
             'tconst\tparentTconst\tseasonNumber\tepisodeNumber',
-            'ttepisode01\tttshow0001\t1\t1',
-            'ttepisode02\tttshow0001\t1\t2',
-            'ttspecial1\tttshow0001\t\\N\t1',
+            'tt2000001\ttt1000001\t1\t1',
+            'tt2000002\ttt1000001\t1\t2',
+            'tt2000003\ttt1000001\t\\N\t1',
             '',
         ].join('\n')
     );
 
     assert.equal(await imdbLmdbDataset.init(), true);
 
-    const firstEpisode = await imdbLmdbDataset.getEpisodeRating('ttshow0001', '1', '1');
+    const showRating = await imdbLmdbDataset.getTitleRating('tt1000001');
+    assert.deepEqual(showRating, {
+        source: 'IMDb',
+        value: '8.0/10',
+    });
+
+    const firstEpisode = await imdbLmdbDataset.getEpisodeRating('tt1000001', '1', '1');
     assert.deepEqual(firstEpisode, {
         source: 'IMDb Episode',
         value: '9.3/10',
     });
 
-    const secondEpisode = await imdbLmdbDataset.getEpisodeRating('ttshow0001', 1, 2);
+    const secondEpisode = await imdbLmdbDataset.getEpisodeRating('tt1000001', 1, 2);
     assert.deepEqual(secondEpisode, {
         source: 'IMDb Episode',
         value: '7.4/10',
     });
 
-    const missingEpisode = await imdbLmdbDataset.getEpisodeRating('ttshow0001', 9, 9);
+    const missingEpisode = await imdbLmdbDataset.getEpisodeRating('tt1000001', 9, 9);
     assert.equal(missingEpisode, null);
+
+    const missingTitle = await imdbLmdbDataset.getTitleRating('ttmissing1');
+    assert.equal(missingTitle, null);
 
     assert.equal(await imdbLmdbDataset.init(), true);
 });

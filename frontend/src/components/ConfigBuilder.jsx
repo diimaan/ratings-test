@@ -11,6 +11,7 @@ const providerDefaults = {
 
 const fallbackRatings = [
   'Common Sense',
+  'Parent Safe',
   'Not Safe',
   'Sexual Violence',
   'Sex & Nudity',

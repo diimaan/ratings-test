@@ -3,6 +3,7 @@ const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKi
 
 const DEFAULT_ENABLED_RATINGS = [
     'Common Sense',
+    'Parent Safe',
     'Not Safe',
     'Sexual Violence',
     'Sex & Nudity',
@@ -23,6 +24,7 @@ const DEFAULT_ENABLED_RATINGS = [
 
 const DEFAULT_RATINGS_ORDER = [
     'Common Sense',
+    'Parent Safe',
     'Not Safe',
     'Sexual Violence',
     'Sex & Nudity',

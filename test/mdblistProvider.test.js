@@ -19,9 +19,11 @@ test('extracts Common Sense age from alternate MDBList safety field shapes', () 
             imdb: 'tt1234567',
             tmdb: 123,
         },
+        commonsense: true,
         common_sense_media: {
             rating: '16+',
             sex_nudity: 4,
+            certification: 'Certified Parent Safe',
         },
         keywords: [
             { name: 'nudity' },
@@ -30,5 +32,7 @@ test('extracts Common Sense age from alternate MDBList safety field shapes', () 
 
     assert.equal(metadata._mdblist.age.commonSense, 16);
     assert.equal(metadata._mdblist.age.parentalNudity, 4);
+    assert.equal(metadata._mdblist.safety.certification, 'Certified Parent Safe');
+    assert.equal(metadata._mdblist.flags.hasCommonSenseData, true);
     assert.deepEqual(metadata._mdblist.keywords, ['nudity']);
 });

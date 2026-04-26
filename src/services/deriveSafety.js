@@ -18,6 +18,35 @@ function isLikelyAnimeFromMdblistMetadata(metadata) {
     return false;
 }
 
+function normalizeSafetyCertification(value) {
+    if (value === true) return 'safe';
+    if (value === false) return 'unsafe';
+
+    const text = String(value ?? '')
+        .trim()
+        .toLowerCase();
+
+    if (!text) return null;
+
+    if (
+        /\bnot[-\s]?parent[-\s]?safe\b/.test(text) ||
+        /\bunsafe\b/.test(text) ||
+        /\bnot safe\b/.test(text)
+    ) {
+        return 'unsafe';
+    }
+
+    if (
+        /\bparent[-\s]?safe\b/.test(text) ||
+        /\bsafe\b/.test(text) ||
+        /\bcertified\b/.test(text)
+    ) {
+        return 'safe';
+    }
+
+    return null;
+}
+
 function deriveMdblistSafetyResults(mdblistResults) {
     const mdblistFlat = flattenResults(mdblistResults);
     const metadata = findMdblistMetadata(mdblistFlat);
@@ -35,6 +64,11 @@ function deriveMdblistSafetyResults(mdblistResults) {
     );
     const parentalNudity = Number(
         metadata?.age?.parentalNudity
+    );
+    const safetyCertification = normalizeSafetyCertification(
+        metadata?.safety?.parentSafe ??
+        metadata?.safety?.certification ??
+        metadata?.safety?.rating
     );
     const keywords = Array.isArray(metadata?.keywords) ? metadata.keywords : [];
 
@@ -108,10 +142,17 @@ function deriveMdblistSafetyResults(mdblistResults) {
         hasSexualViolence
     );
 
-    if (hasSexualViolence || hasSexAndNudity) {
+    if (safetyCertification === 'safe' && !hasSexualViolence && !hasSexAndNudity) {
+        results.push({
+            source: 'Parent Safe',
+            value: '✅ Parent Safe',
+        });
+    }
+
+    if (safetyCertification === 'unsafe' || hasSexualViolence || hasSexAndNudity) {
         results.push({
             source: 'Not Safe',
-            value: '⚠️ Not Safe',
+            value: safetyCertification === 'unsafe' ? '⚠️ Not Parent Safe' : '⚠️ Not Safe',
         });
     }
 
@@ -130,6 +171,8 @@ function deriveMdblistSafetyResults(mdblistResults) {
     logger.info(
         `[MDBSafety] Derived ${results.length} safety result(s) ` +
         `(commonSense=${Number.isFinite(commonSense) && commonSense > 0 ? commonSense : 'none'}, ` +
+        `csmAvailable=${metadata?.flags?.hasCommonSenseData === true ? 'true' : 'false'}, ` +
+        `certification=${safetyCertification || 'none'}, ` +
         `keywords=${keywords.length})`
     );
     logger.debug(`[MDBSafety] Derived safety results: ${JSON.stringify(results)}`);
@@ -140,4 +183,5 @@ function deriveMdblistSafetyResults(mdblistResults) {
 module.exports = {
     deriveMdblistSafetyResults,
     isLikelyAnimeFromMdblistMetadata,
+    normalizeSafetyCertification,
 };

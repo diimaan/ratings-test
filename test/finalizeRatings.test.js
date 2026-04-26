@@ -24,7 +24,7 @@ function userConfig({ enabled, order }) {
     };
 }
 
-test('prioritizes native IMDb and TMDb over aggregate fallback results', () => {
+test('prioritizes local IMDb and native TMDb over aggregate fallback results', () => {
     const ratings = finalizeRatings({
         type: 'movie',
         imdbResults: [{ source: 'IMDb (Movie)', value: '8.7/10' }],
@@ -50,6 +50,52 @@ test('prioritizes native IMDb and TMDb over aggregate fallback results', () => {
     assert.equal(ratings[0].value, '8.7/10');
     assert.equal(ratings[1].value, '82/100');
     assert.equal(ratings[2].value, '73/100');
+});
+
+test('uses aggregate IMDb fallback when local IMDb result is missing', () => {
+    const ratings = finalizeRatings({
+        type: 'movie',
+        imdbResults: [],
+        tmdbResults: [],
+        malResults: [],
+        mdblistDerivedResults: [],
+        metaResults: [
+            { source: 'IMDb', value: '7.1/10' },
+        ],
+        mdblistResults: [
+            { source: 'IMDb', value: '6.9/10' },
+        ],
+        userConfig: userConfig({
+            enabled: ['IMDb (Movie)'],
+            order: ['IMDb (Movie)'],
+        }),
+    });
+
+    assert.deepEqual(ratings, [
+        { source: 'IMDb (Movie)', value: '7.1/10' },
+    ]);
+});
+
+test('uses MDBList IMDb fallback when local and PublicMetaDB results are missing', () => {
+    const ratings = finalizeRatings({
+        type: 'movie',
+        imdbResults: [],
+        tmdbResults: [],
+        malResults: [],
+        mdblistDerivedResults: [],
+        metaResults: [],
+        mdblistResults: [
+            { source: 'IMDb', value: '6.9/10' },
+        ],
+        userConfig: userConfig({
+            enabled: ['IMDb (Movie)'],
+            order: ['IMDb (Movie)'],
+        }),
+    });
+
+    assert.deepEqual(ratings, [
+        { source: 'IMDb (Movie)', value: '6.9/10' },
+    ]);
 });
 
 test('honors custom rating order after provider family selection', () => {

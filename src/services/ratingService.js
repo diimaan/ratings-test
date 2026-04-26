@@ -25,9 +25,10 @@ const {
 
 const CACHE_PREFIX = 'ratings:';
 const NO_RATINGS_MARKER = '___NO_RATINGS___';
+const inFlightRequests = new Map();
 
 // Provider strategy:
-// - Native IMDb / TMDb stay authoritative for their own families.
+// - Local IMDb LMDB and native TMDb stay authoritative for their own families.
 // - MDBList is the primary aggregation layer and drives derived safety metadata.
 // - PublicMetaDB is a fallback aggregation layer when MDBList is unavailable or empty.
 // - Jikan is kept as the anime/MAL recovery path.
@@ -62,8 +63,27 @@ function calculateTTL(releaseDate, numRatings) {
     return ttl;
 }
 
-async function resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
+function elapsedMs(startedAt) {
+    return Date.now() - startedAt;
+}
+
+async function resolveImdbRatings(type, _rawId, ctx) {
     const results = [];
+
+    async function resolveShowOrMovieRating() {
+        const imdbTitle = await imdbDataset.getTitleRating(ctx.imdbId);
+
+        if (imdbTitle && isDisplayableRatingValue(imdbLabel(type, false), imdbTitle.value)) {
+            logger.info('IMDb title rating found in LMDB');
+            return {
+                source: imdbLabel(type, false),
+                value: imdbTitle.value,
+            };
+        }
+
+        logger.info('IMDb title rating not found in LMDB');
+        return null;
+    }
 
     if (ctx.isEpisode) {
         try {
@@ -80,20 +100,12 @@ async function resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
                     value: imdbEpisode.value,
                 });
             } else {
-                logger.info('IMDb Episode rating not found, falling back to native IMDb show/movie');
+                logger.info('IMDb Episode rating not found, falling back to IMDb show/movie');
 
-                const imdbShow = await providers.imdbProvider?.getRating(
-                    type,
-                    rawId,
-                    { ...streamInfo, isEpisode: false, season: null, episode: null },
-                    tmdbId
-                );
+                const imdbShow = await resolveShowOrMovieRating();
 
-                if (imdbShow && isDisplayableRatingValue(imdbLabel(type, false), imdbShow.value)) {
-                    results.push({
-                        source: imdbLabel(type, false),
-                        value: imdbShow.value,
-                    });
+                if (imdbShow) {
+                    results.push(imdbShow);
                 }
             }
         } catch (err) {
@@ -104,18 +116,10 @@ async function resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId) {
     }
 
     try {
-        const imdbShow = await providers.imdbProvider?.getRating(
-            type,
-            rawId,
-            streamInfo,
-            tmdbId
-        );
+        const imdbShow = await resolveShowOrMovieRating();
 
-        if (imdbShow && isDisplayableRatingValue(imdbLabel(type, false), imdbShow.value)) {
-            results.push({
-                source: imdbLabel(type, false),
-                value: imdbShow.value,
-            });
+        if (imdbShow) {
+            results.push(imdbShow);
         }
     } catch (err) {
         logger.warn(`IMDb show/movie resolution failed: ${err.message}`);
@@ -244,37 +248,15 @@ function hasTransientProviderIssue(results) {
     );
 }
 
-async function getRatings(type, rawId, options = {}) {
-    const userConfig = options.userConfig || config.userConfig;
-    const ctx = parseMediaContext(type, rawId);
-    if (!ctx) return null;
-
-    const cacheScope = userConfig?.cacheKey || 'default';
-    const cacheKey = `${CACHE_PREFIX}${cacheScope}:${type}:${rawId}`;
-
-    if (redisClient.isReady()) {
-        try {
-            const cached = await redisClient.getRatingsHashOrMarker(cacheKey);
-
-            if (cached === NO_RATINGS_MARKER) {
-                logger.debug(`Negative cache hit for ${rawId}`);
-                return null;
-            }
-
-            if (cached) {
-                logger.debug(`Cache hit for ${rawId}`);
-                return cached;
-            }
-
-            logger.debug(`Cache miss for ${rawId}`);
-        } catch (err) {
-            logger.error(`Cache error (${cacheKey}): ${err.message}`);
-        }
-    }
-
+async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
     logger.info(`Fetching ratings for ${ctx.imdbId} (${type})`);
 
-    const { tmdbId, name, date } = await getTmdbData(ctx.imdbId, type, userConfig);
+    const requestStartedAt = Date.now();
+    const timings = {};
+
+    const tmdbFindStartedAt = Date.now();
+    const { tmdbId, name, date, rating } = await getTmdbData(ctx.imdbId, type, userConfig);
+    timings.tmdbFind = elapsedMs(tmdbFindStartedAt);
 
     const streamInfo = {
         name,
@@ -283,6 +265,7 @@ async function getRatings(type, rawId, options = {}) {
         season: ctx.season,
         episode: ctx.episode,
         isEpisode: ctx.isEpisode,
+        tmdbFindRating: rating,
     };
 
     const showStreamInfo = {
@@ -298,18 +281,34 @@ async function getRatings(type, rawId, options = {}) {
         logger.info(`[Episode Mode] S${ctx.season}E${ctx.episode}`);
     }
 
-    const imdbPromise = resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId);
-    const tmdbPromise = resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId, userConfig);
+    const imdbPromise = (async () => {
+        const startedAt = Date.now();
+        const result = await resolveImdbRatings(type, rawId, ctx, streamInfo, tmdbId);
+        timings.imdb = elapsedMs(startedAt);
+        return result;
+    })();
+
+    const tmdbPromise = (async () => {
+        const startedAt = Date.now();
+        const result = await resolveTmdbRatings(type, rawId, ctx, streamInfo, tmdbId, userConfig);
+        timings.tmdbRating = elapsedMs(startedAt);
+        return result;
+    })();
 
     const aggregateRawId = ctx.isEpisode ? showRawId : rawId;
     const aggregateStreamInfo = ctx.isEpisode ? showStreamInfo : streamInfo;
-    const primaryAggregatePromise = resolvePrimaryAggregateRatings(
-        type,
-        aggregateRawId,
-        aggregateStreamInfo,
-        tmdbId,
-        userConfig
-    );
+    const primaryAggregatePromise = (async () => {
+        const startedAt = Date.now();
+        const result = await resolvePrimaryAggregateRatings(
+            type,
+            aggregateRawId,
+            aggregateStreamInfo,
+            tmdbId,
+            userConfig
+        );
+        timings.mdblist = elapsedMs(startedAt);
+        return result;
+    })();
 
     const [
         imdbResults,
@@ -328,19 +327,25 @@ async function getRatings(type, rawId, options = {}) {
     const hasMdblistRatings = hasEnabledAggregateResults(mdblistResults, type, userConfig);
     const fallbackAggregateResults = hasMdblistRatings
         ? []
-        : await resolveFallbackAggregateRatings(
-            type,
-            aggregateRawId,
-            aggregateStreamInfo,
-            tmdbId,
-            userConfig
-        );
+        : await (async () => {
+            const startedAt = Date.now();
+            const result = await resolveFallbackAggregateRatings(
+                type,
+                aggregateRawId,
+                aggregateStreamInfo,
+                tmdbId,
+                userConfig
+            );
+            timings.publicMetaDb = elapsedMs(startedAt);
+            return result;
+        })();
     const metaResults = Array.isArray(fallbackAggregateResults)
         ? fallbackAggregateResults
         : [];
 
     const mdblistDerivedResults = deriveMdblistSafetyResults(mdblistResults);
 
+    const malStartedAt = Date.now();
     const malResults = await resolveMalRatings(
         type,
         rawId,
@@ -351,6 +356,7 @@ async function getRatings(type, rawId, options = {}) {
         metaResults,
         userConfig
     );
+    timings.mal = elapsedMs(malStartedAt);
 
     const finalRatings = finalizeRatings({
         type,
@@ -364,6 +370,16 @@ async function getRatings(type, rawId, options = {}) {
     });
 
     logger.info(`Resolved ${finalRatings.length} unique ratings for ${rawId}`);
+    logger.info(
+        `[Timing] ${rawId}: ` +
+        `tmdbFind=${timings.tmdbFind ?? 0}ms ` +
+        `imdb=${timings.imdb ?? 0}ms ` +
+        `tmdb=${timings.tmdbRating ?? 0}ms ` +
+        `mdblist=${timings.mdblist ?? 0}ms ` +
+        `pmdb=${timings.publicMetaDb ?? 0}ms ` +
+        `mal=${timings.mal ?? 0}ms ` +
+        `total=${elapsedMs(requestStartedAt)}ms`
+    );
     logger.debug(`[Ratings] Final ratings: ${JSON.stringify(finalRatings)}`);
 
     if (redisClient.isReady()) {
@@ -400,7 +416,67 @@ async function getRatings(type, rawId, options = {}) {
     return finalRatings.length ? finalRatings : null;
 }
 
+function getInFlightRequestCount() {
+    return inFlightRequests.size;
+}
+
+async function runWithInFlight(cacheKey, label, factory) {
+    const inFlight = inFlightRequests.get(cacheKey);
+    if (inFlight) {
+        logger.info(`Joining in-flight ratings request for ${label}`);
+        return inFlight;
+    }
+
+    const requestPromise = factory();
+    inFlightRequests.set(cacheKey, requestPromise);
+
+    try {
+        return await requestPromise;
+    } finally {
+        if (inFlightRequests.get(cacheKey) === requestPromise) {
+            inFlightRequests.delete(cacheKey);
+        }
+    }
+}
+
+async function getRatings(type, rawId, options = {}) {
+    const userConfig = options.userConfig || config.userConfig;
+    const ctx = parseMediaContext(type, rawId);
+    if (!ctx) return null;
+
+    const cacheScope = userConfig?.cacheKey || 'default';
+    const cacheKey = `${CACHE_PREFIX}${cacheScope}:${type}:${rawId}`;
+
+    if (redisClient.isReady()) {
+        try {
+            const cached = await redisClient.getRatingsHashOrMarker(cacheKey);
+
+            if (cached === NO_RATINGS_MARKER) {
+                logger.debug(`Negative cache hit for ${rawId}`);
+                return null;
+            }
+
+            if (cached) {
+                logger.debug(`Cache hit for ${rawId}`);
+                return cached;
+            }
+
+            logger.debug(`Cache miss for ${rawId}`);
+        } catch (err) {
+            logger.error(`Cache error (${cacheKey}): ${err.message}`);
+        }
+    }
+
+    return runWithInFlight(
+        cacheKey,
+        rawId,
+        () => resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey)
+    );
+}
+
 module.exports = {
     getRatings,
     hasTransientProviderIssue,
+    getInFlightRequestCount,
+    runWithInFlight,
 };

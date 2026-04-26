@@ -23,6 +23,7 @@ function normalizeOtherSourceLabel(source, type) {
 function sourceFamily(label) {
     if (!label) return null;
     if (label === 'Common Sense') return 'Common Sense';
+    if (label === 'Parent Safe') return 'Parent Safe';
     if (label === 'Not Safe') return 'Not Safe';
     if (label === 'Sexual Violence') return 'Sexual Violence';
     if (label === 'Sex & Nudity') return 'Sex & Nudity';
@@ -64,6 +65,7 @@ function isDisplayableRatingValue(source, value) {
 
     if (
         source === 'Common Sense' ||
+        source === 'Parent Safe' ||
         source === 'Not Safe' ||
         source === 'Sexual Violence' ||
         source === 'Sex & Nudity'
@@ -104,6 +106,8 @@ function sourceMatchesEnabled(source, enabledList) {
         'IMDb Episode': ['IMDb (Episode)'],
         'TMDb': ['TMDb (Movie)', 'TMDb (Show)', 'TMDb (Episode)'],
         'TMDb Episode': ['TMDb (Episode)'],
+        'Common Sense': ['Parent Safe'],
+        'Not Safe': ['Parent Safe'],
     };
 
     for (const [alias, expanded] of Object.entries(aliases)) {
@@ -123,6 +127,8 @@ function orderIndexForSource(source, orderList) {
         'IMDb Episode': ['IMDb (Episode)'],
         'TMDb': ['TMDb (Movie)', 'TMDb (Show)', 'TMDb (Episode)'],
         'TMDb Episode': ['TMDb (Episode)'],
+        'Common Sense': ['Parent Safe'],
+        'Not Safe': ['Parent Safe'],
     };
 
     let best = Number.MAX_SAFE_INTEGER;

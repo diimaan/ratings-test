@@ -11,6 +11,20 @@ function formatTmdbAs100(voteAverage) {
     return `${Math.round(num * 10)}/100`;
 }
 
+function ratingFromFindData(tmdbId, type, rating) {
+    if (!tmdbId || !rating) return null;
+
+    const value = formatTmdbAs100(rating.voteAverage);
+    if (!value) return null;
+
+    return {
+        source: PROVIDER_NAME,
+        value,
+        count: rating.voteCount,
+        url: `https://www.themoviedb.org/${type}/${tmdbId}`,
+    };
+}
+
 async function getTmdbRatingDetails(tmdbId, type, userConfig = config.userConfig) {
     const tmdbConfig = userConfig?.providers?.tmdb || config.tmdb;
     const endpoint = type === 'series' ? 'tv' : 'movie';
@@ -132,10 +146,17 @@ async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.
         return getEpisodeRatingDetails(tmdbId, season, episode, userConfig);
     }
 
+    const findRating = ratingFromFindData(tmdbId, type, streamInfo?.tmdbFindRating);
+    if (findRating) {
+        logger.info(`[${PROVIDER_NAME}] Using rating from TMDb find payload`);
+        return findRating;
+    }
+
     return getTmdbRatingDetails(tmdbId, type, userConfig);
 }
 
 module.exports = {
     name: PROVIDER_NAME,
     getRating,
+    ratingFromFindData,
 };

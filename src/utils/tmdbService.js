@@ -7,18 +7,36 @@ function normalizeImdbId(imdbId) {
     return imdbId?.split(':')[0];
 }
 
+function buildTmdbFindRating(item) {
+    const voteAverage = Number(item?.vote_average);
+    const voteCount = Number(item?.vote_count);
+
+    if (!Number.isFinite(voteAverage) || voteAverage <= 0) {
+        return null;
+    }
+
+    if (!Number.isFinite(voteCount) || voteCount <= 0) {
+        return null;
+    }
+
+    return {
+        voteAverage,
+        voteCount,
+    };
+}
+
 async function getTmdbData(imdbId, type, userConfig = config.userConfig) {
     const tmdbConfig = userConfig?.providers?.tmdb || config.tmdb;
     const baseImdb = normalizeImdbId(imdbId);
 
     if (!tmdbConfig.apiKey) {
         logger.error('TMDB API key not configured.');
-        return { tmdbId: null, name: null, date: null };
+        return { tmdbId: null, name: null, date: null, rating: null };
     }
 
     if (!baseImdb) {
         logger.warn('TMDB lookup skipped: IMDb ID missing or invalid.');
-        return { tmdbId: null, name: null, date: null };
+        return { tmdbId: null, name: null, date: null, rating: null };
     }
 
     const path = `/find/${baseImdb}`;
@@ -47,7 +65,7 @@ async function getTmdbData(imdbId, type, userConfig = config.userConfig) {
                 );
             }
 
-            return { tmdbId: null, name: null, date: null };
+            return { tmdbId: null, name: null, date: null, rating: null };
         }
 
         const data = response.data || {};
@@ -58,20 +76,24 @@ async function getTmdbData(imdbId, type, userConfig = config.userConfig) {
             const tmdbId = item.id ?? null;
             const name = item.title || item.name || null;
             const date = item.release_date || item.first_air_date || null;
+            const rating = buildTmdbFindRating(item);
 
             logger.debug(
                 `TMDB Data: IMDb=${baseImdb}, Type=${type} → ID=${tmdbId}, Name="${name}", Date="${date}"`
             );
 
-            return { tmdbId, name, date };
+            return { tmdbId, name, date, rating };
         }
 
         logger.warn(`No TMDB results for IMDb=${baseImdb} (type=${type}).`);
-        return { tmdbId: null, name: null, date: null };
+        return { tmdbId: null, name: null, date: null, rating: null };
     } catch (err) {
         logger.error(`TMDB API error for IMDb=${baseImdb}: ${err.message}`);
-        return { tmdbId: null, name: null, date: null };
+        return { tmdbId: null, name: null, date: null, rating: null };
     }
 }
 
-module.exports = { getTmdbData };
+module.exports = {
+    getTmdbData,
+    buildTmdbFindRating,
+};

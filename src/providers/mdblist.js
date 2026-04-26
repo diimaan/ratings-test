@@ -154,6 +154,20 @@ function firstNormalizedNumber(...values) {
     return null;
 }
 
+function firstPresentValue(...values) {
+    for (const value of values) {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+            return value;
+        }
+    }
+
+    return null;
+}
+
+function objectOrEmpty(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
 function extractStructuredMetadata(data) {
     if (!data || typeof data !== 'object') return null;
 
@@ -165,6 +179,7 @@ function extractStructuredMetadata(data) {
     const keywords = extractKeywordNames(data);
     const commonSenseMedia = data?.commonsense_media || data?.common_sense_media || data?.commonsense || {};
     const parentalGuide = data?.parental_guide || data?.parental || {};
+    const safety = objectOrEmpty(data?.safety);
 
     return {
         _mdblist: {
@@ -200,6 +215,31 @@ function extractStructuredMetadata(data) {
                     parentalGuide?.sex_nudity
                 ),
             },
+            safety: {
+                parentSafe: firstPresentValue(
+                    safety?.parent_safe,
+                    safety?.parentSafe,
+                    safety?.is_parent_safe,
+                    safety?.certified_parent_safe,
+                    commonSenseMedia?.parent_safe,
+                    commonSenseMedia?.parentSafe,
+                    commonSenseMedia?.is_parent_safe,
+                    data?.parent_safe,
+                    data?.parentSafe,
+                    data?.is_parent_safe,
+                    data?.cringemdb_parent_safe
+                ),
+                certification: firstPresentValue(
+                    safety?.certification,
+                    safety?.rating,
+                    safety?.label,
+                    commonSenseMedia?.certification,
+                    commonSenseMedia?.rating_label,
+                    data?.certification,
+                    data?.safety_certification,
+                    data?.parental_certification
+                ),
+            },
             language,
             genres,
             keywords,
@@ -207,6 +247,7 @@ function extractStructuredMetadata(data) {
                 hasMalId: Boolean(malId),
                 isJapaneseLanguage: language === 'ja',
                 hasAnimeGenre: genres.some(genre => /anime/i.test(genre)),
+                hasCommonSenseData: data?.commonsense === true || Boolean(commonSenseMedia?.common_sense),
             },
         },
     };

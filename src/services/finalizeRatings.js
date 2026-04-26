@@ -11,11 +11,12 @@ const {
 
 const RATING_PRIORITY = {
     'Common Sense': ['MDBDERIVED'],
+    'Parent Safe': ['MDBDERIVED'],
     'Not Safe': ['MDBDERIVED'],
     'Sexual Violence': ['MDBDERIVED'],
     'Sex & Nudity': ['MDBDERIVED'],
-    IMDb: ['NATIVE', 'PMDB', 'MDBLIST'],
-    TMDb: ['NATIVE', 'PMDB', 'MDBLIST'],
+    IMDb: ['LOCAL', 'PMDB', 'MDBLIST'],
+    TMDb: ['LOCAL', 'PMDB', 'MDBLIST'],
     MAL: ['JIKAN_ID', 'MDBLIST', 'PMDB'],
     Letterboxd: ['MDBLIST', 'PMDB'],
     MDBList: ['MDBLIST'],
@@ -49,6 +50,9 @@ function finalizeRatings({
         'Common Sense': {
             MDBDERIVED: mdblistDerivedFlat,
         },
+        'Parent Safe': {
+            MDBDERIVED: mdblistDerivedFlat,
+        },
         'Not Safe': {
             MDBDERIVED: mdblistDerivedFlat,
         },
@@ -59,12 +63,12 @@ function finalizeRatings({
             MDBDERIVED: mdblistDerivedFlat,
         },
         IMDb: {
-            NATIVE: imdbFlat,
+            LOCAL: imdbFlat,
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
         TMDb: {
-            NATIVE: tmdbFlat,
+            LOCAL: tmdbFlat,
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
@@ -112,6 +116,7 @@ function finalizeRatings({
 
         if (
             family === 'Common Sense' ||
+            family === 'Parent Safe' ||
             family === 'Not Safe' ||
             family === 'Sexual Violence' ||
             family === 'Sex & Nudity'

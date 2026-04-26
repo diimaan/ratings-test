@@ -10,6 +10,7 @@ const DIVIDER = '───────────────';
 
 const TOP_PRIORITY_SOURCES = new Set([
     'Common Sense',
+    'Parent Safe',
     'Not Safe',
     'Sexual Violence',
     'Sex & Nudity',
@@ -140,6 +141,10 @@ function getSpecialRatings(ratings) {
         r => r && r.source === 'Not Safe' && isRenderableRating(r)
     );
 
+    const parentSafe = ratings.find(
+        r => r && r.source === 'Parent Safe' && isRenderableRating(r)
+    );
+
     const sexualWarnings = ratings.filter(
         r =>
             r &&
@@ -147,7 +152,7 @@ function getSpecialRatings(ratings) {
             isRenderableRating(r)
     );
 
-    return { parental, notSafe, sexualWarnings };
+    return { parental, parentSafe, notSafe, sexualWarnings };
 }
 
 function buildAgeLines(ratings) {
@@ -163,10 +168,12 @@ function buildAgeLines(ratings) {
 
 function buildWarningLines(ratings) {
     const lines = [];
-    const { notSafe, sexualWarnings } = getSpecialRatings(ratings);
+    const { parentSafe, notSafe, sexualWarnings } = getSpecialRatings(ratings);
 
     if (notSafe) {
         lines.push(stripScale(notSafe.value, notSafe.source));
+    } else if (parentSafe) {
+        lines.push(stripScale(parentSafe.value, parentSafe.source));
     }
 
     for (const warning of sexualWarnings) {

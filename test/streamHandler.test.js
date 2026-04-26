@@ -83,6 +83,29 @@ test('compact series output prefers episode ratings over show ratings when both 
     }
 });
 
+test('full output places positive parent safety verdict after main ratings', async () => {
+    const originalGetRatings = ratingService.getRatings;
+    ratingService.getRatings = async () => [
+        { source: 'Common Sense', value: '13+' },
+        { source: 'Parent Safe', value: '✅ Parent Safe' },
+        { source: 'IMDb (Movie)', value: '7.4/10' },
+        { source: 'TMDb (Movie)', value: '71/100' },
+    ];
+
+    try {
+        const payload = await streamHandler({
+            type: 'movie',
+            id: 'tt0133093',
+            userConfig: userConfig('full', 4),
+        });
+
+        const description = payload.streams[0].description;
+        assert.match(description, /👪 13\+\n🎬 IMDb \(Movie\) - 7.4\n🎬 TMDb \(Movie\) - 71\n✅ Parent Safe/);
+    } finally {
+        ratingService.getRatings = originalGetRatings;
+    }
+});
+
 test('display mode full and compact settings override user agent detection', () => {
     const tvHeaders = {
         'user-agent': 'Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12',

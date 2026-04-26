@@ -246,6 +246,26 @@ async function getEpisodeRating(showId, season, episode) {
     }
 }
 
+async function getTitleRating(imdbId) {
+    try {
+        if (config.imdbDataset.mode === 'disabled') return null;
+
+        const baseId = String(imdbId || '').split(':')[0];
+        if (!/^tt\d+$/.test(baseId)) return null;
+
+        const rating = getRatingsDb().get(ratingKey(baseId));
+        if (!rating || !Number.isFinite(rating.rating)) return null;
+
+        return {
+            source: 'IMDb',
+            value: `${rating.rating.toFixed(1)}/10`,
+        };
+    } catch (err) {
+        logger.error(`[IMDb LMDB] Title rating error: ${err.message}`);
+        return null;
+    }
+}
+
 async function init() {
     try {
         if (config.imdbDataset.mode === 'disabled') {
@@ -304,4 +324,5 @@ async function init() {
 module.exports = {
     init,
     getEpisodeRating,
+    getTitleRating,
 };
