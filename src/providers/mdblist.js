@@ -334,7 +334,13 @@ async function getRating(type, imdbId, _streamInfo, tmdbId, userConfig = config.
         return await fetchByImdb(type, imdbId, providerConfig);
     } catch (err) {
         logger.error(`[MDBList] Request error: ${err.message}`);
-        return null;
+        return {
+            _providerStatus: {
+                provider: 'MDBList',
+                transient: true,
+                error: err.message,
+            },
+        };
     }
 }
 

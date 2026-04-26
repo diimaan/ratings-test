@@ -238,6 +238,12 @@ function hasEnabledAggregateResults(results, type, userConfig = config.userConfi
     });
 }
 
+function hasTransientProviderIssue(results) {
+    return flattenResults(results).some(item =>
+        item?._providerStatus?.transient === true
+    );
+}
+
 async function getRatings(type, rawId, options = {}) {
     const userConfig = options.userConfig || config.userConfig;
     const ctx = parseMediaContext(type, rawId);
@@ -318,6 +324,7 @@ async function getRatings(type, rawId, options = {}) {
     const mdblistResults = Array.isArray(primaryAggregateResults)
         ? primaryAggregateResults
         : [];
+    const primaryAggregateTransient = hasTransientProviderIssue(mdblistResults);
     const hasMdblistRatings = hasEnabledAggregateResults(mdblistResults, type, userConfig);
     const fallbackAggregateResults = hasMdblistRatings
         ? []
@@ -361,7 +368,9 @@ async function getRatings(type, rawId, options = {}) {
 
     if (redisClient.isReady()) {
         try {
-            if (finalRatings.length > 0) {
+            if (primaryAggregateTransient) {
+                logger.warn(`Skipping cache write for ${rawId} because a primary aggregate provider had a transient failure`);
+            } else if (finalRatings.length > 0) {
                 const ttl = calculateTTL(date, finalRatings.length);
                 const ok = await redisClient.setRatingsHash(cacheKey, finalRatings, ttl);
 
@@ -391,4 +400,7 @@ async function getRatings(type, rawId, options = {}) {
     return finalRatings.length ? finalRatings : null;
 }
 
-module.exports = { getRatings };
+module.exports = {
+    getRatings,
+    hasTransientProviderIssue,
+};
