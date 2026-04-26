@@ -54,7 +54,7 @@ test('normalizes explicit unsafe safety certification', () => {
     assert.equal(normalizeSafetyCertification(''), null);
 });
 
-test('derives sex and nudity warning from MDBList exact sex keyword', () => {
+test('does not derive sex and nudity warning from one broad MDBList sex keyword', () => {
     const derived = deriveMdblistSafetyResults([{
         _mdblist: {
             age: {
@@ -62,6 +62,22 @@ test('derives sex and nudity warning from MDBList exact sex keyword', () => {
                 parentalNudity: 2,
             },
             keywords: ['period-drama', 'sex', 'railroad-worker'],
+        },
+    }]);
+
+    assert.deepEqual(derived, [
+        { source: 'Common Sense', value: '13+' },
+    ]);
+});
+
+test('derives sex and nudity warning from ranked MDBList keyword evidence', () => {
+    const derived = deriveMdblistSafetyResults([{
+        _mdblist: {
+            age: {
+                commonSense: 13,
+                parentalNudity: 2,
+            },
+            keywords: ['period-drama', 'intercourse', 'nudity'],
         },
     }]);
 
@@ -87,5 +103,43 @@ test('can suppress MDBList keyword-derived warnings for episode safety', () => {
 
     assert.deepEqual(derived, [
         { source: 'Common Sense', value: '17+' },
+    ]);
+});
+
+test('uses higher threshold for anime keyword-derived sex and nudity warnings', () => {
+    const derived = deriveMdblistSafetyResults([{
+        _mdblist: {
+            age: {
+                commonSense: 15,
+            },
+            flags: {
+                hasAnimeGenre: true,
+            },
+            keywords: ['intercourse', 'nudity'],
+        },
+    }]);
+
+    assert.deepEqual(derived, [
+        { source: 'Common Sense', value: '15+' },
+    ]);
+});
+
+test('derives sexual violence warning from severe MDBList keyword evidence', () => {
+    const derived = deriveMdblistSafetyResults([{
+        _mdblist: {
+            age: {
+                commonSense: 18,
+            },
+            keywords: ['period-drama', 'sexual-violence'],
+        },
+    }], {
+        type: 'series',
+        isEpisode: true,
+    });
+
+    assert.deepEqual(derived, [
+        { source: 'Common Sense', value: '18+' },
+        { source: 'Not Safe', value: '⚠️ Not Parent Safe' },
+        { source: 'Sexual Violence', value: '💔 Sexual Violence' },
     ]);
 });

@@ -3,6 +3,9 @@ const {
     findMdblistMetadata,
     flattenResults,
 } = require('./ratingHelpers');
+const {
+    evaluateSafetyKeywords,
+} = require('./safetyPolicy');
 
 function isLikelyAnimeFromMdblistMetadata(metadata) {
     if (!metadata || typeof metadata !== 'object') return false;
@@ -49,6 +52,8 @@ function normalizeSafetyCertification(value) {
 
 function deriveMdblistSafetyResults(mdblistResults, options = {}) {
     const useKeywordWarnings = options.useKeywordWarnings !== false;
+    const type = options.type || 'movie';
+    const isEpisode = options.isEpisode === true;
     const mdblistFlat = flattenResults(mdblistResults);
     const metadata = findMdblistMetadata(mdblistFlat);
 
@@ -72,6 +77,7 @@ function deriveMdblistSafetyResults(mdblistResults, options = {}) {
         metadata?.safety?.rating
     );
     const keywords = Array.isArray(metadata?.keywords) ? metadata.keywords : [];
+    const isAnime = options.isAnime ?? isLikelyAnimeFromMdblistMetadata(metadata);
 
     if (Number.isFinite(commonSense) && commonSense > 0) {
         results.push({
@@ -80,69 +86,16 @@ function deriveMdblistSafetyResults(mdblistResults, options = {}) {
         });
     }
 
-    const sexualViolencePatterns = [
-        /\brape\b/i,
-        /\bsexual-assault\b/i,
-        /\bsexual-violence\b/i,
-        /\battempted-rape\b/i,
-        /\bgang-rape\b/i,
-        /\bprison-rape\b/i,
-        /\bdate-rape\b/i,
-        /\brape-scene\b/i,
-        /\brape-victim\b/i,
-        /\bfemale-rape-victim\b/i,
-        /\bmale-rape\b/i,
-        /\bmale-rape-victim\b/i,
-        /\bmale-on-female-rape\b/i,
-        /\bfemale-on-male-rape\b/i,
-        /\bbrutal-rape\b/i,
-        /\banal-rape\b/i,
-        /\bsimulated-rape\b/i,
-        /\bsimulated-anal-rape\b/i,
-        /\bgay-rape\b/i,
-        /\binterracial-rape\b/i,
-        /\bconsensual-sex-turns-to-rape\b/i,
-        /\bsexual assault\b/i,
-        /\bsexual violence\b/i,
-    ];
-
-    const sexNudityPatterns = [
-        /\bsex\b/i,
-        /\bsex-scene\b/i,
-        /\bsex-scenes\b/i,
-        /\bgraphic-sex-scene\b/i,
-        /\bnudity\b/i,
-        /\bfull-frontal-nudity\b/i,
-        /\bfemale-frontal-nudity\b/i,
-        /\bfemale-full-frontal-nudity\b/i,
-        /\bfemale-nudity\b/i,
-        /\bfemale-rear-nudity\b/i,
-        /\bfemale-topless-nudity\b/i,
-        /\bmale-frontal-nudity\b/i,
-        /\bmale-full-frontal-nudity\b/i,
-        /\bmale-nudity\b/i,
-        /\bmale-rear-nudity\b/i,
-        /\bpublic-nudity\b/i,
-        /\boutdoor-nudity\b/i,
-        /\bgraphic-nudity\b/i,
-        /\bbrief-male-frontal-nudity\b/i,
-        /\bbrief-male-full-frontal-nudity\b/i,
-        /\blesbian-sex-scene\b/i,
-    ];
-
-    const hasSexualViolence = useKeywordWarnings && keywords.some(keyword =>
-        sexualViolencePatterns.some(pattern => pattern.test(keyword))
-    );
-
-    const hasSexAndNudityKeyword = useKeywordWarnings && keywords.some(keyword =>
-        sexNudityPatterns.some(pattern => pattern.test(keyword))
-    );
-
-    const hasSexAndNudity = (
-        (Number.isFinite(parentalNudity) && parentalNudity >= 4) ||
-        hasSexAndNudityKeyword ||
-        hasSexualViolence
-    );
+    const keywordSafety = evaluateSafetyKeywords({
+        keywords,
+        parentalNudity,
+        useKeywordWarnings,
+        type,
+        isEpisode,
+        isAnime,
+    });
+    const hasSexualViolence = keywordSafety.hasSexualViolence;
+    const hasSexAndNudity = keywordSafety.hasSexAndNudity || hasSexualViolence;
 
     if (safetyCertification === 'safe' && !hasSexualViolence && !hasSexAndNudity) {
         results.push({
@@ -176,6 +129,10 @@ function deriveMdblistSafetyResults(mdblistResults, options = {}) {
         `csmAvailable=${metadata?.flags?.hasCommonSenseData === true ? 'true' : 'false'}, ` +
         `certification=${safetyCertification || 'none'}, ` +
         `keywordWarnings=${useKeywordWarnings ? 'on' : 'off'}, ` +
+        `keywordScore=${keywordSafety.sexNudityScore}/${keywordSafety.threshold}, ` +
+        `sexualViolenceScore=${keywordSafety.sexualViolenceScore}, ` +
+        `anime=${isAnime ? 'true' : 'false'}, ` +
+        `episode=${isEpisode ? 'true' : 'false'}, ` +
         `keywords=${keywords.length})`
     );
     logger.debug(`[MDBSafety] Derived safety results: ${JSON.stringify(results)}`);

@@ -439,6 +439,8 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         ? []
         : deriveMdblistSafetyResults(mdblistResults, {
             useKeywordWarnings: shouldUseMdblistKeywordSafety(ctx, userConfig),
+            type,
+            isEpisode: ctx.isEpisode,
         });
 
     const malStartedAt = Date.now();
