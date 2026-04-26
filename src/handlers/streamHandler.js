@@ -228,6 +228,11 @@ function isTvLikeUserAgent(userAgent) {
     return TV_USER_AGENT_PATTERNS.some(pattern => pattern.test(text));
 }
 
+function userAgentFamily(userAgent) {
+    if (!userAgent) return 'missing';
+    return isTvLikeUserAgent(userAgent) ? 'tv' : 'non-tv';
+}
+
 function resolveDisplayMode(userConfig = config.userConfig, requestHeaders = {}) {
     const ratingsConfig = userConfig?.ratings || config.ratings;
     const configuredMode = (ratingsConfig.displayMode || 'auto').toLowerCase();
@@ -269,6 +274,15 @@ async function streamHandler({ type, id, userConfig, requestHeaders = {} }) {
         return { streams: [] };
     }
 
+    const displayMode = resolveDisplayMode(activeUserConfig, requestHeaders);
+    const configuredDisplayMode = activeUserConfig?.ratings?.displayMode || 'auto';
+    const requestUserAgent = requestHeaders['user-agent'] || requestHeaders['User-Agent'];
+
+    logger.info(
+        `Resolved display mode ${displayMode} for ${id} ` +
+        `(configured=${configuredDisplayMode}, uaFamily=${userAgentFamily(requestUserAgent)})`
+    );
+
     const description = formatRatingsCard(ratings, type, activeUserConfig, requestHeaders);
 
     logger.debug(`Resolved ratings payload for ${id}: ${JSON.stringify(ratings)}`);
@@ -299,3 +313,4 @@ async function streamHandler({ type, id, userConfig, requestHeaders = {} }) {
 module.exports = streamHandler;
 module.exports.resolveDisplayMode = resolveDisplayMode;
 module.exports.isTvLikeUserAgent = isTvLikeUserAgent;
+module.exports.userAgentFamily = userAgentFamily;

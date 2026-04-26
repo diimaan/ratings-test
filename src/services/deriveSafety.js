@@ -23,6 +23,7 @@ function deriveMdblistSafetyResults(mdblistResults) {
     const metadata = findMdblistMetadata(mdblistFlat);
 
     if (!metadata) {
+        logger.info('[MDBSafety] No MDBList metadata available for safety derivation');
         return [];
     }
 
@@ -126,6 +127,11 @@ function deriveMdblistSafetyResults(mdblistResults) {
         });
     }
 
+    logger.info(
+        `[MDBSafety] Derived ${results.length} safety result(s) ` +
+        `(commonSense=${Number.isFinite(commonSense) && commonSense > 0 ? commonSense : 'none'}, ` +
+        `keywords=${keywords.length})`
+    );
     logger.debug(`[MDBSafety] Derived safety results: ${JSON.stringify(results)}`);
 
     return results;

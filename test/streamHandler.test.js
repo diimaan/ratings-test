@@ -13,6 +13,7 @@ const ratingService = require('../src/services/ratingService');
 const streamHandler = require('../src/handlers/streamHandler');
 const {
     resolveDisplayMode,
+    userAgentFamily,
 } = streamHandler;
 
 function userConfig(displayMode = 'compact', limit = 4) {
@@ -112,4 +113,10 @@ test('display mode auto uses full output for desktop user agents', () => {
 
 test('display mode auto falls back to compact when user agent is missing', () => {
     assert.equal(resolveDisplayMode(userConfig('auto'), {}), 'compact');
+});
+
+test('classifies user agent family without logging raw user agent strings', () => {
+    assert.equal(userAgentFamily('Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12'), 'tv');
+    assert.equal(userAgentFamily('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'), 'non-tv');
+    assert.equal(userAgentFamily(''), 'missing');
 });

@@ -140,8 +140,18 @@ function extractGenreNames(data) {
 }
 
 function normalizeNumber(value) {
-    const num = Number(value);
+    const match = String(value ?? '').match(/([0-9]{1,2}(?:\.[0-9]+)?)/);
+    const num = match ? Number(match[1]) : Number(value);
     return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+function firstNormalizedNumber(...values) {
+    for (const value of values) {
+        const normalized = normalizeNumber(value);
+        if (normalized) return normalized;
+    }
+
+    return null;
 }
 
 function extractStructuredMetadata(data) {
@@ -153,6 +163,8 @@ function extractStructuredMetadata(data) {
     const language = String(data.language || '').toLowerCase() || null;
     const genres = extractGenreNames(data);
     const keywords = extractKeywordNames(data);
+    const commonSenseMedia = data?.commonsense_media || data?.common_sense_media || data?.commonsense || {};
+    const parentalGuide = data?.parental_guide || data?.parental || {};
 
     return {
         _mdblist: {
@@ -162,9 +174,31 @@ function extractStructuredMetadata(data) {
                 mal: malId || null,
             },
             age: {
-                commonSense: normalizeNumber(data?.commonsense_media?.common_sense),
-                ageRating: normalizeNumber(data?.age_rating),
-                parentalNudity: normalizeNumber(data?.commonsense_media?.parental_nudity),
+                commonSense: firstNormalizedNumber(
+                    commonSenseMedia?.common_sense,
+                    commonSenseMedia?.rating,
+                    commonSenseMedia?.age,
+                    commonSenseMedia?.minimum_age,
+                    commonSenseMedia?.recommended_age,
+                    commonSenseMedia?.age_rating,
+                    data?.common_sense,
+                    data?.commonsense,
+                    data?.csm_age
+                ),
+                ageRating: firstNormalizedNumber(
+                    data?.age_rating,
+                    data?.certification_age,
+                    data?.content_rating_age,
+                    data?.minimum_age
+                ),
+                parentalNudity: firstNormalizedNumber(
+                    commonSenseMedia?.parental_nudity,
+                    commonSenseMedia?.sex,
+                    commonSenseMedia?.sex_nudity,
+                    parentalGuide?.nudity,
+                    parentalGuide?.sex,
+                    parentalGuide?.sex_nudity
+                ),
             },
             language,
             genres,
@@ -347,4 +381,5 @@ async function getRating(type, imdbId, _streamInfo, tmdbId, userConfig = config.
 module.exports = {
     name: 'MDBList',
     getRating,
+    extractStructuredMetadata,
 };
