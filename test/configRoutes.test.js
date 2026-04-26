@@ -107,7 +107,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
             },
             publicmetadb: {
                 apiKey: '',
-                apiUrl: 'https://publicmetadb.com/api',
+                apiUrl: 'https://publicmetadb.com',
             },
         },
         ratings: {

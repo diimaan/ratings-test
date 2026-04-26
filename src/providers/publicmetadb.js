@@ -65,6 +65,15 @@ function average(values) {
     return valid.reduce((sum, v) => sum + v, 0) / valid.length;
 }
 
+function buildRatingsUrl(apiUrl) {
+    const normalizedBase = String(apiUrl || '')
+        .trim()
+        .replace(/\/+$/, '')
+        .replace(/\/api$/i, '');
+
+    return `${normalizedBase}/api/external/ratings`;
+}
+
 async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.userConfig) {
     const providerConfig = userConfig?.providers?.publicmetadb || config.publicmetadb;
 
@@ -96,7 +105,7 @@ async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.
     try {
         logger.debug(`[${PROVIDER_NAME}] Fetching ratings for tmdb=${tmdbId} type=${mediaType}`);
 
-        const res = await axios.get(`${providerConfig.apiUrl}/api/external/ratings`, {
+        const res = await axios.get(buildRatingsUrl(providerConfig.apiUrl), {
             timeout: config.http.requestTimeoutMs || 8000,
             headers: {
                 'User-Agent': config.userAgent,
@@ -182,4 +191,5 @@ async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.
 module.exports = {
     name: PROVIDER_NAME,
     getRating,
+    buildRatingsUrl,
 };

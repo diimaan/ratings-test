@@ -24,7 +24,7 @@ test('encrypts and decrypts provider API keys without changing non-secret config
             },
             publicmetadb: {
                 apiKey: '',
-                apiUrl: 'https://publicmetadb.com/api',
+                apiUrl: 'https://publicmetadb.com',
             },
             jikan: {
                 apiUrl: 'https://api.jikan.moe/v4',

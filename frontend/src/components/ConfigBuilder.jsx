@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 const providerDefaults = {
   tmdb: { apiKey: '', apiUrl: 'https://api.themoviedb.org/3' },
   mdblist: { apiKey: '', apiUrl: 'https://api.mdblist.com' },
-  publicmetadb: { apiKey: '', apiUrl: 'https://publicmetadb.com/api' },
+  publicmetadb: { apiKey: '', apiUrl: 'https://publicmetadb.com' },
 };
 
 const fallbackRatings = [

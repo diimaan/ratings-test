@@ -87,7 +87,7 @@ function buildUserConfigFromEnv(env = process.env) {
             },
             publicmetadb: {
                 apiKey: env.PUBLICMETADB_API_KEY || '',
-                apiUrl: env.PUBLICMETADB_API_URL || 'https://publicmetadb.com/api',
+                apiUrl: env.PUBLICMETADB_API_URL || 'https://publicmetadb.com',
             },
             jikan: {
                 apiUrl: env.JIKAN_API_URL || 'https://api.jikan.moe/v4',
