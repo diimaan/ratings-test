@@ -11,11 +11,14 @@ process.env.LOG_LEVEL = 'error';
 
 const ratingService = require('../src/services/ratingService');
 const streamHandler = require('../src/handlers/streamHandler');
+const {
+    resolveDisplayMode,
+} = streamHandler;
 
-function compactUserConfig(limit = 4) {
+function userConfig(displayMode = 'compact', limit = 4) {
     return {
         ratings: {
-            displayMode: 'compact',
+            displayMode,
             compactLimit: limit,
             enabled: [],
             order: [],
@@ -36,7 +39,7 @@ test('compact movie output prioritizes native IMDb and TMDb before fallback rati
         const payload = await streamHandler({
             type: 'movie',
             id: 'tt0133093',
-            userConfig: compactUserConfig(2),
+            userConfig: userConfig('compact', 2),
         });
 
         assert.equal(payload.streams.length, 1);
@@ -63,7 +66,7 @@ test('compact series output prefers episode ratings over show ratings when both 
         const payload = await streamHandler({
             type: 'series',
             id: 'tt0944947:1:9',
-            userConfig: compactUserConfig(4),
+            userConfig: userConfig('compact', 4),
         });
 
         assert.equal(payload.streams.length, 1);
@@ -77,4 +80,36 @@ test('compact series output prefers episode ratings over show ratings when both 
     } finally {
         ratingService.getRatings = originalGetRatings;
     }
+});
+
+test('display mode full and compact settings override user agent detection', () => {
+    const tvHeaders = {
+        'user-agent': 'Mozilla/5.0 (Linux; Android TV) Stremio/1.6.12',
+    };
+    const desktopHeaders = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/123',
+    };
+
+    assert.equal(resolveDisplayMode(userConfig('full'), tvHeaders), 'full');
+    assert.equal(resolveDisplayMode(userConfig('compact'), desktopHeaders), 'compact');
+});
+
+test('display mode auto uses TV-like user agents for compact output', () => {
+    assert.equal(resolveDisplayMode(userConfig('auto'), {
+        'user-agent': 'Mozilla/5.0 (Linux; Android TV 12; Chromecast) Stremio/1.6.12',
+    }), 'compact');
+
+    assert.equal(resolveDisplayMode(userConfig('auto'), {
+        'user-agent': 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0)',
+    }), 'compact');
+});
+
+test('display mode auto uses full output for desktop user agents', () => {
+    assert.equal(resolveDisplayMode(userConfig('auto'), {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/123',
+    }), 'full');
+});
+
+test('display mode auto falls back to compact when user agent is missing', () => {
+    assert.equal(resolveDisplayMode(userConfig('auto'), {}), 'compact');
 });

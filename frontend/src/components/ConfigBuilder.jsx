@@ -41,7 +41,7 @@ function uniqueOrderedRatings(defaults) {
 
 export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   const [providers, setProviders] = useState(providerDefaults);
-  const [displayMode, setDisplayMode] = useState('compact');
+  const [displayMode, setDisplayMode] = useState('auto');
   const [compactLimit, setCompactLimit] = useState(4);
   const [enabledRatings, setEnabledRatings] = useState(fallbackRatings);
   const [ratingOrder, setRatingOrder] = useState(fallbackRatings);
@@ -87,7 +87,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
             apiUrl: data.providers?.publicmetadb?.apiUrl || providerDefaults.publicmetadb.apiUrl,
           },
         });
-        setDisplayMode(data.ratings?.displayMode || 'compact');
+        setDisplayMode(data.ratings?.displayMode || 'auto');
         setCompactLimit(data.ratings?.compactLimit || 4);
         setEnabledRatings(data.ratings?.enabled || fallbackRatings);
         setRatingOrder(uniqueOrderedRatings(data));
@@ -166,7 +166,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
           apiUrl: data.config.providers?.publicmetadb?.apiUrl || providerDefaults.publicmetadb.apiUrl,
         },
       });
-      setDisplayMode(data.config.ratings?.displayMode || 'compact');
+      setDisplayMode(data.config.ratings?.displayMode || 'auto');
       setCompactLimit(data.config.ratings?.compactLimit || 4);
       setEnabledRatings(data.config.ratings?.enabled || fallbackRatings);
       setRatingOrder(data.config.ratings?.order || fallbackRatings);
@@ -443,7 +443,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
           apiUrl: imported.providers?.publicmetadb?.apiUrl || providerDefaults.publicmetadb.apiUrl,
         },
       });
-      setDisplayMode(imported.ratings?.displayMode || 'compact');
+      setDisplayMode(imported.ratings?.displayMode || 'auto');
       setCompactLimit(imported.ratings?.compactLimit || 4);
       setEnabledRatings(imported.ratings?.enabled || fallbackRatings);
       setRatingOrder(imported.ratings?.order || fallbackRatings);
@@ -524,8 +524,8 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
           <div className="grid gap-4 md:grid-cols-[1fr_160px]">
             <div>
               <span className="mb-2 block text-sm font-semibold text-gray-200">Display mode</span>
-              <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-white/10">
-                {['compact', 'full'].map((mode) => (
+              <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-white/10">
+                {['auto', 'compact', 'full'].map((mode) => (
                   <button
                     key={mode}
                     type="button"

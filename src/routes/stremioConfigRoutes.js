@@ -101,6 +101,7 @@ router.get('/stremio/:configId/stream/:type/:id.json', asyncRoute(async (req, re
         type: req.params.type,
         id: req.params.id,
         userConfig,
+        requestHeaders: req.headers,
     });
 
     sendAddonJson(res, payload);

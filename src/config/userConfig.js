@@ -19,7 +19,7 @@ function parsePositiveInt(value, fallback) {
 
 function normalizeDisplayMode(value, fallback = 'full') {
     const normalized = String(value || fallback).trim().toLowerCase();
-    return ['compact', 'full'].includes(normalized) ? normalized : fallback;
+    return ['auto', 'compact', 'full'].includes(normalized) ? normalized : fallback;
 }
 
 function hashValue(value) {
@@ -96,7 +96,7 @@ function buildUserConfigFromEnv(env = process.env) {
         ratings: {
             enabled: parseCsv(env.ENABLED_RATINGS, DEFAULT_ENABLED_RATINGS),
             order: parseCsv(env.RATINGS_ORDER, DEFAULT_RATINGS_ORDER),
-            displayMode: normalizeDisplayMode(env.DISPLAY_MODE || 'full'),
+            displayMode: normalizeDisplayMode(env.DISPLAY_MODE || 'auto'),
             compactLimit: parsePositiveInt(env.COMPACT_RATINGS_LIMIT, 4),
         },
     };

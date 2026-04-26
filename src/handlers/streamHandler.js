@@ -15,6 +15,24 @@ const TOP_PRIORITY_SOURCES = new Set([
     'Sex & Nudity',
 ]);
 
+const TV_USER_AGENT_PATTERNS = [
+    /android tv/i,
+    /aft[a-z0-9]*/i,
+    /fire tv/i,
+    /smart-tv/i,
+    /smarttv/i,
+    /tizen/i,
+    /webos/i,
+    /netcast/i,
+    /crkey/i,
+    /chromecast/i,
+    /googletv/i,
+    /google tv/i,
+    /appletv/i,
+    /apple tv/i,
+    /roku/i,
+];
+
 function isRogerEbertStars(value) {
     const text = String(value || '').trim();
     return /^[⭐✨]+$/.test(text) && text.includes('⭐');
@@ -204,9 +222,28 @@ function formatFullRatings(ratings) {
     return wrapWithDivider(lines.join('\n'));
 }
 
-function formatRatingsCard(ratings, type, userConfig = config.userConfig) {
+function isTvLikeUserAgent(userAgent) {
+    const text = String(userAgent || '').trim();
+    if (!text) return false;
+    return TV_USER_AGENT_PATTERNS.some(pattern => pattern.test(text));
+}
+
+function resolveDisplayMode(userConfig = config.userConfig, requestHeaders = {}) {
     const ratingsConfig = userConfig?.ratings || config.ratings;
-    const mode = (ratingsConfig.displayMode || 'full').toLowerCase();
+    const configuredMode = (ratingsConfig.displayMode || 'auto').toLowerCase();
+
+    if (configuredMode === 'compact' || configuredMode === 'full') {
+        return configuredMode;
+    }
+
+    const userAgent = requestHeaders['user-agent'] || requestHeaders['User-Agent'];
+    if (!userAgent) return 'compact';
+
+    return isTvLikeUserAgent(userAgent) ? 'compact' : 'full';
+}
+
+function formatRatingsCard(ratings, type, userConfig = config.userConfig, requestHeaders = {}) {
+    const mode = resolveDisplayMode(userConfig, requestHeaders);
 
     if (mode === 'compact') {
         return formatCompactRatings(ratings, type, userConfig);
@@ -215,7 +252,7 @@ function formatRatingsCard(ratings, type, userConfig = config.userConfig) {
     return formatFullRatings(ratings);
 }
 
-async function streamHandler({ type, id, userConfig }) {
+async function streamHandler({ type, id, userConfig, requestHeaders = {} }) {
     const activeUserConfig = userConfig || config.userConfig;
 
     logger.info(`Received stream request for: type=${type}, id=${id}`);
@@ -232,7 +269,7 @@ async function streamHandler({ type, id, userConfig }) {
         return { streams: [] };
     }
 
-    const description = formatRatingsCard(ratings, type, activeUserConfig);
+    const description = formatRatingsCard(ratings, type, activeUserConfig, requestHeaders);
 
     logger.debug(`Resolved ratings payload for ${id}: ${JSON.stringify(ratings)}`);
     logger.debug(`Resolved description for ${id}: ${JSON.stringify(description)}`);
@@ -260,3 +297,5 @@ async function streamHandler({ type, id, userConfig }) {
 }
 
 module.exports = streamHandler;
+module.exports.resolveDisplayMode = resolveDisplayMode;
+module.exports.isTvLikeUserAgent = isTvLikeUserAgent;
