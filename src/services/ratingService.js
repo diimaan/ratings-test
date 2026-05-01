@@ -458,31 +458,41 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         `willFetch=${shouldUsePublicMetaDbFallback ? 'true' : 'false'})`
     );
 
-    const fallbackAggregateResults = shouldUsePublicMetaDbFallback
-        ? await (async () => {
-            const startedAt = Date.now();
-            const result = await resolveFallbackAggregateRatings(
-                type,
-                aggregateRawId,
-                aggregateStreamInfo,
-                tmdbId,
-                userConfig
+    let fallbackAggregateResults = [];
+
+    if (shouldUsePublicMetaDbFallback && pmdbFallbackMode === 'compare') {
+        const startedAt = Date.now();
+        resolveFallbackAggregateRatings(
+            type,
+            aggregateRawId,
+            aggregateStreamInfo,
+            tmdbId,
+            userConfig
+        ).then((result) => {
+            const flattened = flattenResults(result);
+            logger.info(
+                `[PublicMetaDB] Compare mode fetched ${flattened.length} mapped rating(s) ` +
+                `in ${elapsedMs(startedAt)}ms; leaving final stream output unchanged`
             );
-            timings.publicMetaDb = elapsedMs(startedAt);
-            return result;
-        })()
-        : [];
+        }).catch((err) => {
+            logger.warn(`[PublicMetaDB] Compare mode fetch failed: ${err.message}`);
+        });
+    } else if (shouldUsePublicMetaDbFallback) {
+        const startedAt = Date.now();
+        fallbackAggregateResults = await resolveFallbackAggregateRatings(
+            type,
+            aggregateRawId,
+            aggregateStreamInfo,
+            tmdbId,
+            userConfig
+        );
+        timings.publicMetaDb = elapsedMs(startedAt);
+    }
+
     const metaResults = fallbackAggregateResultsForFinalization(
         pmdbFallbackMode,
         fallbackAggregateResults
     );
-
-    if (pmdbFallbackMode === 'compare' && Array.isArray(fallbackAggregateResults) && fallbackAggregateResults.length > 0) {
-        logger.info(
-            `[PublicMetaDB] Compare mode fetched ${fallbackAggregateResults.length} mapped rating(s); ` +
-            'leaving final stream output unchanged'
-        );
-    }
 
     const mdblistDerivedResults = safetySourceMode(userConfig) === 'direct'
         ? []
