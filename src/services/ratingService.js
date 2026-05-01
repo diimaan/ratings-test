@@ -294,9 +294,8 @@ async function resolveDirectSafetyRatings(type, rawId, streamInfo, userConfig = 
             if (commonSense?.ageRating) {
                 results.push(commonSense.ageRating);
             }
-            if (commonSense?.warnings && !streamInfo?.isEpisode) {
-                results.push(...splitSafetyBlock(commonSense.warnings));
-            }
+            // Common Sense category headings are useful for age context, but too broad
+            // for direct warning extraction without severity parsing.
         } catch (err) {
             logger.warn(`Common Sense direct safety failed for ${rawId}: ${err.message}`);
         } finally {
