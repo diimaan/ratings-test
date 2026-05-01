@@ -102,9 +102,9 @@ function evaluateSafetyKeywords({
     if (!useKeywordWarnings) {
         return {
             hasSexualViolence: false,
-            hasSexAndNudity: Number.isFinite(parentalNudity) && parentalNudity >= 4,
+            hasSexAndNudity: false,
             sexualViolenceScore: 0,
-            sexNudityScore: Number.isFinite(parentalNudity) && parentalNudity >= 4 ? 80 : 0,
+            sexNudityScore: 0,
             threshold: mediaLevelThreshold({ isEpisode, isAnime, type }),
             sexualViolenceMatches: [],
             sexNudityMatches: [],

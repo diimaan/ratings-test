@@ -93,12 +93,14 @@ test('can suppress MDBList keyword-derived warnings for episode safety', () => {
         _mdblist: {
             age: {
                 commonSense: 17,
-                parentalNudity: 2,
+                parentalNudity: 4,
             },
-            keywords: ['female-nudity', 'nudity'],
+            keywords: ['female-nudity', 'nudity', 'intercourse'],
         },
     }], {
         useKeywordWarnings: false,
+        type: 'series',
+        isEpisode: true,
     });
 
     assert.deepEqual(derived, [
