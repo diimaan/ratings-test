@@ -20,6 +20,7 @@ services:
       MDBLIST_API_URL: ${MDBLIST_API_URL:-https://api.mdblist.com}
       PUBLICMETADB_API_KEY: ${PUBLICMETADB_API_KEY:-}
       PUBLICMETADB_API_URL: ${PUBLICMETADB_API_URL:-https://publicmetadb.com/api}
+      PUBLICMETADB_FALLBACK_MODE: ${PUBLICMETADB_FALLBACK_MODE:-auto}
       JIKAN_API_URL: ${JIKAN_API_URL:-https://api.jikan.moe/v4}
       REDIS_URL: redis://redis:6379
       SQLITE_DB_PATH: /app/data/app/ratings.sqlite
