@@ -17,6 +17,11 @@ const requestTimeoutMs = parsePositiveInt(
     DEFAULT_HTTP_TIMEOUT_MS
 );
 
+function normalizePublicMetaDbFallbackMode(value) {
+    const normalized = String(value || 'auto').trim().toLowerCase();
+    return ['auto', 'force', 'off'].includes(normalized) ? normalized : 'auto';
+}
+
 const config = {
     port: process.env.PORT || 61262,
     logLevel: process.env.LOG_LEVEL || 'info',
@@ -27,6 +32,7 @@ const config = {
     tmdb: userConfig.providers.tmdb,
     mdblist: userConfig.providers.mdblist,
     publicmetadb: userConfig.providers.publicmetadb,
+    publicMetaDbFallbackMode: normalizePublicMetaDbFallbackMode(process.env.PUBLICMETADB_FALLBACK_MODE),
     jikan: userConfig.providers.jikan,
     redis: {
         url: process.env.REDIS_URL || 'redis://localhost:6379',

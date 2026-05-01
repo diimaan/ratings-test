@@ -40,6 +40,30 @@ test('ignores normal null and displayable aggregate results for transient detect
     ]), false);
 });
 
+
+test('PublicMetaDB fallback mode defaults to auto and respects force/off decisions', () => {
+    const config = require('../src/config');
+    const ratingService = require('../src/services/ratingService');
+    const originalMode = config.publicMetaDbFallbackMode;
+
+    try {
+        config.publicMetaDbFallbackMode = 'auto';
+        assert.equal(ratingService.publicMetaDbFallbackMode(), 'auto');
+        assert.equal(ratingService.shouldResolveFallbackAggregate(false), true);
+        assert.equal(ratingService.shouldResolveFallbackAggregate(true), false);
+
+        config.publicMetaDbFallbackMode = 'force';
+        assert.equal(ratingService.shouldResolveFallbackAggregate(false), true);
+        assert.equal(ratingService.shouldResolveFallbackAggregate(true), true);
+
+        config.publicMetaDbFallbackMode = 'off';
+        assert.equal(ratingService.shouldResolveFallbackAggregate(false), false);
+        assert.equal(ratingService.shouldResolveFallbackAggregate(true), false);
+    } finally {
+        config.publicMetaDbFallbackMode = originalMode;
+    }
+});
+
 test('deduplicates concurrent in-flight requests by cache key', async () => {
     let calls = 0;
     let release;

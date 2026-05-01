@@ -40,6 +40,19 @@ const fallbackAggregateProviders = [
     providers.publicMetaDbProvider,
 ].filter(Boolean);
 
+function publicMetaDbFallbackMode() {
+    return config.publicMetaDbFallbackMode || 'auto';
+}
+
+function shouldResolveFallbackAggregate(hasPrimaryRatings) {
+    const mode = publicMetaDbFallbackMode();
+
+    if (mode === 'off') return false;
+    if (mode === 'force') return true;
+
+    return !hasPrimaryRatings;
+}
+
 function safetySourceMode(userConfig = config.userConfig) {
     return userConfig?.ratings?.safetySource || config.ratings?.safetySource || 'hybrid';
 }
@@ -431,9 +444,17 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
         : [];
     const primaryAggregateTransient = hasTransientProviderIssue(mdblistResults);
     const hasMdblistRatings = hasEnabledAggregateResults(mdblistResults, type, userConfig);
-    const fallbackAggregateResults = hasMdblistRatings
-        ? []
-        : await (async () => {
+    const pmdbFallbackMode = publicMetaDbFallbackMode();
+    const shouldUsePublicMetaDbFallback = shouldResolveFallbackAggregate(hasMdblistRatings);
+
+    logger.info(
+        `[PublicMetaDB] Fallback mode ${pmdbFallbackMode} ` +
+        `(hasMdblistRatings=${hasMdblistRatings ? 'true' : 'false'}, ` +
+        `willFetch=${shouldUsePublicMetaDbFallback ? 'true' : 'false'})`
+    );
+
+    const fallbackAggregateResults = shouldUsePublicMetaDbFallback
+        ? await (async () => {
             const startedAt = Date.now();
             const result = await resolveFallbackAggregateRatings(
                 type,
@@ -444,7 +465,8 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
             );
             timings.publicMetaDb = elapsedMs(startedAt);
             return result;
-        })();
+        })()
+        : [];
     const metaResults = Array.isArray(fallbackAggregateResults)
         ? fallbackAggregateResults
         : [];
@@ -593,4 +615,6 @@ module.exports = {
     hasTransientProviderIssue,
     getInFlightRequestCount,
     runWithInFlight,
+    publicMetaDbFallbackMode,
+    shouldResolveFallbackAggregate,
 };

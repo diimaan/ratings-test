@@ -129,6 +129,10 @@ async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.
         }
 
         const payload = res.data;
+        const payloadItems = Array.isArray(payload?.items) ? payload.items.length : 0;
+
+        logger.info(`[${PROVIDER_NAME}] Received payload status=${res.status} items=${payloadItems}`);
+        logger.debug(`[${PROVIDER_NAME}] Raw payload sample: ${JSON.stringify(payload).slice(0, 4000)}`);
 
         if (!payload || !Array.isArray(payload.items)) {
             logger.debug(`[${PROVIDER_NAME}] No items array in response`);
@@ -179,7 +183,8 @@ async function getRating(type, _imdbId, streamInfo, tmdbId, userConfig = config.
             return null;
         }
 
-        logger.debug(`[${PROVIDER_NAME}] Extracted ${results.length} ratings from ${payload.items.length} items`);
+        logger.info(`[${PROVIDER_NAME}] Extracted ${results.length} mapped rating(s) from ${payload.items.length} item(s)`);
+        logger.debug(`[${PROVIDER_NAME}] Mapped ratings: ${JSON.stringify(results)}`);
 
         return results;
     } catch (err) {
