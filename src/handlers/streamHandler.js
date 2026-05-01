@@ -19,18 +19,26 @@ const TOP_PRIORITY_SOURCES = new Set([
 
 const TV_USER_AGENT_PATTERNS = [
     ['android-tv', /android tv/i],
-    ['fire-tv', /aft[a-z0-9]*|fire tv/i],
-    ['smart-tv', /smart-tv|smarttv/i],
-    ['tizen', /tizen/i],
-    ['webos', /webos/i],
-    ['netcast', /netcast/i],
-    ['chromecast', /crkey|chromecast/i],
     ['google-tv', /googletv|google tv/i],
+    ['fire-tv', /aft[a-z0-9]*|fire tv/i],
+    ['chromecast', /crkey|chromecast/i],
+    ['smart-tv', /smart-tv|smarttv|hbbtv|nettv|internet\.tv/i],
+    ['tizen', /tizen/i],
+    ['webos', /webos|web0s/i],
+    ['netcast', /netcast/i],
+    ['vidaa', /vidaa/i],
+    ['viera', /viera/i],
+    ['bravia', /bravia|sony.*tv/i],
     ['apple-tv', /appletv|apple tv/i],
     ['roku', /roku/i],
+    ['xbox', /xbox/i],
+    ['playstation', /playstation|ps4|ps5/i],
+    ['nintendo', /nintendo switch/i],
 ];
 
 const MOBILE_USER_AGENT_PATTERNS = [
+    ['stremio-ios', /stremio.*(iphone|ipad|ios)/i],
+    ['stremio-android', /stremio.*android(?! tv)/i],
     ['iphone', /iphone/i],
     ['ipad', /ipad/i],
     ['android-mobile', /android(?! tv).*mobile/i],
@@ -38,6 +46,7 @@ const MOBILE_USER_AGENT_PATTERNS = [
 ];
 
 const DESKTOP_USER_AGENT_PATTERNS = [
+    ['stremio-desktop', /stremio(shell)?\/[\d.]+.*(desktop|macintosh|mac os x|windows|linux)/i],
     ['macos', /macintosh|mac os x/i],
     ['windows', /windows nt/i],
     ['linux-desktop', /x11|linux x86_64|linux aarch64/i],
