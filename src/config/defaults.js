@@ -19,7 +19,6 @@ const DEFAULT_ENABLED_RATINGS = [
 ];
 
 const DEFAULT_RATINGS_ORDER = [
-    'Content Safety',
     'IMDb (Episode)',
     'IMDb (Show)',
     'IMDb (Movie)',

@@ -12,7 +12,6 @@ const providerDefaults = {
 const safetyRatingAliases = ['Common Sense', 'Parent Safe', 'Not Safe', 'Sexual Violence', 'Sex & Nudity'];
 
 const ratingLabels = {
-  'Content Safety': 'Content Safety',
   'MC': 'Metacritic',
   'RT': 'Rotten Tomatoes',
   'PC': 'Popcornmeter',
@@ -20,7 +19,6 @@ const ratingLabels = {
 };
 
 const fallbackRatings = [
-  'Content Safety',
   'IMDb (Movie)',
   'IMDb (Show)',
   'IMDb (Episode)',
@@ -40,12 +38,16 @@ function absoluteUrl(path) {
   return new URL(path, window.location.origin).href;
 }
 
+function hasContentSafety(list = []) {
+  return list.some((rating) => rating === 'Content Safety' || safetyRatingAliases.includes(rating));
+}
+
 function normalizeRatingListForUi(list = fallbackRatings) {
   const next = [];
 
   list.forEach((rating) => {
-    const normalized = safetyRatingAliases.includes(rating) ? 'Content Safety' : rating;
-    if (!next.includes(normalized)) next.push(normalized);
+    if (rating === 'Content Safety' || safetyRatingAliases.includes(rating)) return;
+    if (!next.includes(rating)) next.push(rating);
   });
 
   return next;
@@ -65,6 +67,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   const [providers, setProviders] = useState(providerDefaults);
   const [displayMode, setDisplayMode] = useState('auto');
   const [compactLimit, setCompactLimit] = useState(4);
+  const [contentSafetyEnabled, setContentSafetyEnabled] = useState(true);
   const [enabledRatings, setEnabledRatings] = useState(fallbackRatings);
   const [ratingOrder, setRatingOrder] = useState(fallbackRatings);
   const [manifestUrl, setManifestUrl] = useState(absoluteUrl(defaultManifestPath));
@@ -111,6 +114,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         });
         setDisplayMode(data.ratings?.displayMode || 'auto');
         setCompactLimit(data.ratings?.compactLimit || 4);
+        setContentSafetyEnabled(hasContentSafety(data.ratings?.enabled || ['Content Safety']));
         setEnabledRatings(normalizeRatingListForUi(data.ratings?.enabled || fallbackRatings));
         setRatingOrder(uniqueOrderedRatings(data));
       })
@@ -129,6 +133,11 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   const orderedEnabledRatings = useMemo(
     () => ratingOrder.filter((rating) => enabledRatings.includes(rating)),
     [enabledRatings, ratingOrder]
+  );
+
+  const savedEnabledRatings = useMemo(
+    () => contentSafetyEnabled ? ['Content Safety', ...orderedEnabledRatings] : orderedEnabledRatings,
+    [contentSafetyEnabled, orderedEnabledRatings]
   );
 
   const canSave = providers.tmdb.apiKey.trim().length > 0 && password.length >= 8;
@@ -190,6 +199,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
       });
       setDisplayMode(data.config.ratings?.displayMode || 'auto');
       setCompactLimit(data.config.ratings?.compactLimit || 4);
+      setContentSafetyEnabled(hasContentSafety(data.config.ratings?.enabled || ['Content Safety']));
       setEnabledRatings(normalizeRatingListForUi(data.config.ratings?.enabled || fallbackRatings));
       setRatingOrder(normalizeRatingListForUi(data.config.ratings?.order || fallbackRatings));
     }
@@ -231,7 +241,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
             },
           },
           ratings: {
-            enabled: orderedEnabledRatings,
+            enabled: savedEnabledRatings,
             order: ratingOrder,
             displayMode,
             compactLimit,
@@ -418,7 +428,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         },
       },
       ratings: {
-        enabled: orderedEnabledRatings,
+        enabled: savedEnabledRatings,
         order: ratingOrder,
         displayMode,
         compactLimit,
@@ -467,6 +477,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
       });
       setDisplayMode(imported.ratings?.displayMode || 'auto');
       setCompactLimit(imported.ratings?.compactLimit || 4);
+      setContentSafetyEnabled(hasContentSafety(imported.ratings?.enabled || ['Content Safety']));
       setEnabledRatings(normalizeRatingListForUi(imported.ratings?.enabled || fallbackRatings));
       setRatingOrder(normalizeRatingListForUi(imported.ratings?.order || fallbackRatings));
       toast.success('Config backup imported');
@@ -573,25 +584,45 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
             </label>
           </div>
 
+          <div className="rounded-lg border border-white/10 bg-slate-950 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="block text-sm font-semibold text-gray-200">Content safety</span>
+                <span className="text-xs text-gray-400">Shown separately from rating order</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setContentSafetyEnabled((current) => !current)}
+                className={`flex min-w-28 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition ${contentSafetyEnabled ? 'border-emerald-400 bg-emerald-400/10 text-emerald-200' : 'border-white/10 bg-slate-900 text-gray-400'}`}
+              >
+                {contentSafetyEnabled && <FaCheck className="shrink-0" />}
+                {contentSafetyEnabled ? 'Enabled' : 'Disabled'}
+              </button>
+            </div>
+          </div>
+
           <div>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-gray-200">Ratings to show</span>
+              <span className="text-sm font-semibold text-gray-200">Rating order</span>
               <span className="text-xs text-gray-400">{orderedEnabledRatings.length} enabled</span>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2">
               {ratingOrder.map((rating, index) => {
                 const selected = enabledRatings.includes(rating);
                 return (
                   <div
                     key={rating}
-                    className={`grid min-h-11 grid-cols-[1fr_auto] items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition ${selected ? 'border-emerald-400 bg-emerald-400/10 text-white' : 'border-white/10 bg-slate-950 text-gray-400'}`}
+                    className={`grid min-h-11 grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${selected ? 'border-emerald-400 bg-emerald-400/10 text-white' : 'border-white/10 bg-slate-950 text-gray-400'}`}
                   >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-slate-900 text-xs font-bold text-gray-300">
+                      {index + 1}
+                    </span>
                     <button
                       type="button"
                       onClick={() => toggleRating(rating)}
-                      className="flex items-center justify-between gap-2 text-left"
+                      className="flex min-w-0 items-center justify-between gap-2 text-left"
                     >
-                      <span>{ratingLabel(rating)}</span>
+                      <span className="truncate">{ratingLabel(rating)}</span>
                       {selected && <FaCheck className="shrink-0 text-emerald-300" />}
                     </button>
                     <span className="flex gap-1">

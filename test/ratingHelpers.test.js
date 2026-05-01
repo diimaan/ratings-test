@@ -21,10 +21,10 @@ test('treats Parent Safe as enabled by existing safety-related configs', () => {
     assert.equal(sourceMatchesEnabled('Parent Safe', ['IMDb (Movie)']), false);
 });
 
-test('orders Content Safety beside all safety results', () => {
-    assert.equal(orderIndexForSource('Common Sense', ['Content Safety', 'IMDb']), 0);
-    assert.equal(orderIndexForSource('Parent Safe', ['Content Safety', 'IMDb']), 0);
-    assert.equal(orderIndexForSource('Sex & Nudity', ['Content Safety', 'IMDb']), 0);
+test('does not use Content Safety as a sorting control', () => {
+    assert.equal(orderIndexForSource('Common Sense', ['Content Safety', 'IMDb']), Number.MAX_SAFE_INTEGER);
+    assert.equal(orderIndexForSource('Parent Safe', ['Content Safety', 'IMDb']), Number.MAX_SAFE_INTEGER);
+    assert.equal(orderIndexForSource('Sex & Nudity', ['Content Safety', 'IMDb']), Number.MAX_SAFE_INTEGER);
 });
 
 test('orders Parent Safe beside existing safety-related config entries', () => {

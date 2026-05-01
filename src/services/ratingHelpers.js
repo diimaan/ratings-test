@@ -128,7 +128,6 @@ function orderIndexForSource(source, orderList) {
         'IMDb Episode': ['IMDb (Episode)'],
         'TMDb': ['TMDb (Movie)', 'TMDb (Show)', 'TMDb (Episode)'],
         'TMDb Episode': ['TMDb (Episode)'],
-        'Content Safety': ['Common Sense', 'Parent Safe', 'Not Safe', 'Sexual Violence', 'Sex & Nudity'],
         'Common Sense': ['Parent Safe'],
         'Not Safe': ['Parent Safe'],
     };
