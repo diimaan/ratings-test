@@ -153,7 +153,7 @@ function buildUserConfigFromInput(input = {}, baseConfig) {
             order: normalizeArray(ratings.order, baseConfig.ratings.order),
             displayMode: normalizeDisplayMode(ratings.displayMode, baseConfig.ratings.displayMode),
             compactLimit: parsePositiveInt(ratings.compactLimit, baseConfig.ratings.compactLimit),
-            safetySource: normalizeSafetySource(ratings.safetySource, baseConfig.ratings.safetySource),
+            safetySource: normalizeSafetySource(baseConfig.ratings.safetySource),
         },
     };
 

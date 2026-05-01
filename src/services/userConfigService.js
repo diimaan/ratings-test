@@ -40,6 +40,9 @@ async function getUserConfigById(configId) {
 }
 
 function publicConfigView(userConfig) {
+    const publicRatings = { ...userConfig.ratings };
+    delete publicRatings.safetySource;
+
     return {
         id: userConfig.id,
         version: userConfig.version,
@@ -60,7 +63,7 @@ function publicConfigView(userConfig) {
                 apiUrl: userConfig.providers.jikan.apiUrl,
             },
         },
-        ratings: userConfig.ratings,
+        ratings: publicRatings,
     };
 }
 

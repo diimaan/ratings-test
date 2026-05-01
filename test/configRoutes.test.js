@@ -128,6 +128,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
     assert.match(created.body.config.id, /^[0-9a-f-]{36}$/);
     assert.equal(created.body.config.providers.tmdb.configured, true);
     assert.equal(created.body.config.providers.tmdb.apiKey, undefined);
+    assert.equal(created.body.config.ratings.safetySource, undefined);
     assert.equal(created.body.manifestPath, `/stremio/${created.body.config.id}/manifest.json`);
     assert.equal(
         created.body.manifestUrl,
@@ -152,7 +153,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
     assert.equal(retrieved.response.status, 200);
     assert.equal(retrieved.body.config.providers.tmdb.apiKey, 'tmdb-user-key');
     assert.equal(retrieved.body.config.providers.mdblist.apiKey, 'mdblist-user-key');
-    assert.equal(retrieved.body.config.ratings.safetySource, 'hybrid');
+    assert.equal(retrieved.body.config.ratings.safetySource, undefined);
 
     const updated = await requestJson(baseUrl, `/api/config/${configId}`, {
         method: 'PUT',
@@ -175,7 +176,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
     assert.equal(updated.response.status, 200);
     assert.equal(updated.body.config.id, configId);
     assert.equal(updated.body.config.ratings.displayMode, 'full');
-    assert.equal(updated.body.config.ratings.safetySource, 'hybrid');
+    assert.equal(updated.body.config.ratings.safetySource, undefined);
     assert.equal(updated.body.config.providers.tmdb.apiKey, undefined);
 
     const deleted = await requestJson(baseUrl, `/api/config/${configId}`, {
