@@ -9,12 +9,18 @@ const providerDefaults = {
   publicmetadb: { apiKey: '', apiUrl: 'https://publicmetadb.com' },
 };
 
+const safetyRatingAliases = ['Common Sense', 'Parent Safe', 'Not Safe', 'Sexual Violence', 'Sex & Nudity'];
+
+const ratingLabels = {
+  'Content Safety': 'Content Safety',
+  'MC': 'Metacritic',
+  'RT': 'Rotten Tomatoes',
+  'PC': 'Popcornmeter',
+  'MAL': 'MyAnimeList',
+};
+
 const fallbackRatings = [
-  'Common Sense',
-  'Parent Safe',
-  'Not Safe',
-  'Sexual Violence',
-  'Sex & Nudity',
+  'Content Safety',
   'IMDb (Movie)',
   'IMDb (Show)',
   'IMDb (Episode)',
@@ -34,9 +40,24 @@ function absoluteUrl(path) {
   return new URL(path, window.location.origin).href;
 }
 
+function normalizeRatingListForUi(list = fallbackRatings) {
+  const next = [];
+
+  list.forEach((rating) => {
+    const normalized = safetyRatingAliases.includes(rating) ? 'Content Safety' : rating;
+    if (!next.includes(normalized)) next.push(normalized);
+  });
+
+  return next;
+}
+
+function ratingLabel(rating) {
+  return ratingLabels[rating] || rating;
+}
+
 function uniqueOrderedRatings(defaults) {
-  const order = defaults?.ratings?.order || [];
-  const enabled = defaults?.ratings?.enabled || fallbackRatings;
+  const order = normalizeRatingListForUi(defaults?.ratings?.order || []);
+  const enabled = normalizeRatingListForUi(defaults?.ratings?.enabled || fallbackRatings);
   return [...new Set([...order, ...enabled, ...fallbackRatings])];
 }
 
@@ -90,7 +111,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         });
         setDisplayMode(data.ratings?.displayMode || 'auto');
         setCompactLimit(data.ratings?.compactLimit || 4);
-        setEnabledRatings(data.ratings?.enabled || fallbackRatings);
+        setEnabledRatings(normalizeRatingListForUi(data.ratings?.enabled || fallbackRatings));
         setRatingOrder(uniqueOrderedRatings(data));
       })
       .catch((err) => {
@@ -169,8 +190,8 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
       });
       setDisplayMode(data.config.ratings?.displayMode || 'auto');
       setCompactLimit(data.config.ratings?.compactLimit || 4);
-      setEnabledRatings(data.config.ratings?.enabled || fallbackRatings);
-      setRatingOrder(data.config.ratings?.order || fallbackRatings);
+      setEnabledRatings(normalizeRatingListForUi(data.config.ratings?.enabled || fallbackRatings));
+      setRatingOrder(normalizeRatingListForUi(data.config.ratings?.order || fallbackRatings));
     }
   };
 
@@ -446,8 +467,8 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
       });
       setDisplayMode(imported.ratings?.displayMode || 'auto');
       setCompactLimit(imported.ratings?.compactLimit || 4);
-      setEnabledRatings(imported.ratings?.enabled || fallbackRatings);
-      setRatingOrder(imported.ratings?.order || fallbackRatings);
+      setEnabledRatings(normalizeRatingListForUi(imported.ratings?.enabled || fallbackRatings));
+      setRatingOrder(normalizeRatingListForUi(imported.ratings?.order || fallbackRatings));
       toast.success('Config backup imported');
     } catch (err) {
       toast.error(`Could not import config: ${err.message}`);
@@ -570,7 +591,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
                       onClick={() => toggleRating(rating)}
                       className="flex items-center justify-between gap-2 text-left"
                     >
-                      <span>{rating}</span>
+                      <span>{ratingLabel(rating)}</span>
                       {selected && <FaCheck className="shrink-0 text-emerald-300" />}
                     </button>
                     <span className="flex gap-1">
@@ -579,7 +600,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
                         onClick={() => moveRating(rating, 'up')}
                         disabled={index === 0}
                         className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-gray-300 disabled:opacity-30"
-                        title={`Move ${rating} up`}
+                        title={`Move ${ratingLabel(rating)} up`}
                       >
                         <FaArrowUp />
                       </button>
@@ -588,7 +609,7 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
                         onClick={() => moveRating(rating, 'down')}
                         disabled={index === ratingOrder.length - 1}
                         className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-gray-300 disabled:opacity-30"
-                        title={`Move ${rating} down`}
+                        title={`Move ${ratingLabel(rating)} down`}
                       >
                         <FaArrowDown />
                       </button>

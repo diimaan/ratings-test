@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 import RatingCard from './components/RatingCard';
 import { AddonManagerCard } from './components/AddonManagerCard';
@@ -9,17 +8,14 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const SponsorBanner = ({ html }) => {
   return (
-    <motion.div
+    <div
       className="relative mx-auto mt-6 flex max-w-5xl items-center justify-center rounded-xl border border-white/5 bg-[#0f1a2f] px-6 py-5 text-center text-sm text-gray-200 shadow backdrop-blur sm:text-base"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.3 }}
     >
       <div
         className="sponsor-content w-full text-center"
         dangerouslySetInnerHTML={{ __html: html }}
       />
-    </motion.div>
+    </div>
   );
 };
 
@@ -38,21 +34,11 @@ function App() {
       <Analytics />
       <SpeedInsights />
 
-      <motion.div
-        className="max-w-7xl mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
+      <div className="max-w-7xl mx-auto">
         <header className="text-center mb-12 space-y-4">
-          <motion.h1
-            className="pb-2 text-4xl font-extrabold leading-[1.15] gradient-text sm:text-6xl"
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
+          <h1 className="pb-2 text-4xl font-extrabold leading-[1.15] gradient-text sm:text-6xl">
             Ratings Aggregator
-          </motion.h1>
+          </h1>
           <p className="text-xl sm:text-2xl text-gray-300">
             Your all-in-one movie and TV show ratings aggregator for Stremio
           </p>
@@ -83,16 +69,11 @@ function App() {
 
         <AddonManagerCard />
 
-        <motion.footer
-          className="text-center mt-12 text-gray-400 text-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
+        <footer className="text-center mt-12 text-gray-400 text-sm">
           {/* Version {addonVersion} •  */}
           Made with ❤️ for Stremio
-        </motion.footer>
-      </motion.div>
+        </footer>
+      </div>
     </div>
   );
 }

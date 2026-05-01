@@ -6,10 +6,25 @@ const {
     sourceMatchesEnabled,
 } = require('../src/services/ratingHelpers');
 
+test('treats Content Safety as the single user-facing safety option', () => {
+    assert.equal(sourceMatchesEnabled('Common Sense', ['Content Safety']), true);
+    assert.equal(sourceMatchesEnabled('Parent Safe', ['Content Safety']), true);
+    assert.equal(sourceMatchesEnabled('Not Safe', ['Content Safety']), true);
+    assert.equal(sourceMatchesEnabled('Sexual Violence', ['Content Safety']), true);
+    assert.equal(sourceMatchesEnabled('Sex & Nudity', ['Content Safety']), true);
+    assert.equal(sourceMatchesEnabled('IMDb (Movie)', ['Content Safety']), false);
+});
+
 test('treats Parent Safe as enabled by existing safety-related configs', () => {
     assert.equal(sourceMatchesEnabled('Parent Safe', ['Common Sense']), true);
     assert.equal(sourceMatchesEnabled('Parent Safe', ['Not Safe']), true);
     assert.equal(sourceMatchesEnabled('Parent Safe', ['IMDb (Movie)']), false);
+});
+
+test('orders Content Safety beside all safety results', () => {
+    assert.equal(orderIndexForSource('Common Sense', ['Content Safety', 'IMDb']), 0);
+    assert.equal(orderIndexForSource('Parent Safe', ['Content Safety', 'IMDb']), 0);
+    assert.equal(orderIndexForSource('Sex & Nudity', ['Content Safety', 'IMDb']), 0);
 });
 
 test('orders Parent Safe beside existing safety-related config entries', () => {
