@@ -85,10 +85,11 @@ This addon runs in BYOB mode. The base `/manifest.json` exists only to send user
 `PUBLICMETADB_FALLBACK_MODE` controls the experimental Public MetaDB fallback path:
 
 - `auto`: production default. Use Public MetaDB only when MDBList has no usable enabled ratings.
-- `force`: diagnostic mode. Fetch Public MetaDB even when MDBList succeeds so the mapped payload can be compared.
+- `compare`: diagnostic mode. Fetch and log Public MetaDB even when MDBList succeeds, but leave final stream output unchanged.
+- `force`: diagnostic mode. Fetch Public MetaDB even when MDBList succeeds and allow it to participate in final rating selection.
 - `off`: disable Public MetaDB fallback completely.
 
-When testing `force`, clear Redis or use a fresh title so cached final ratings do not hide provider behavior.
+When testing `compare` or `force`, clear Redis or use a fresh title so cached final ratings do not hide provider behavior.
 
 ## Local Docker Desktop
 

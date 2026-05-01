@@ -41,7 +41,7 @@ test('ignores normal null and displayable aggregate results for transient detect
 });
 
 
-test('PublicMetaDB fallback mode defaults to auto and respects force/off decisions', () => {
+test('PublicMetaDB fallback mode defaults to auto and supports diagnostic modes', () => {
     const config = require('../src/config');
     const ratingService = require('../src/services/ratingService');
     const originalMode = config.publicMetaDbFallbackMode;
@@ -55,6 +55,22 @@ test('PublicMetaDB fallback mode defaults to auto and respects force/off decisio
         config.publicMetaDbFallbackMode = 'force';
         assert.equal(ratingService.shouldResolveFallbackAggregate(false), true);
         assert.equal(ratingService.shouldResolveFallbackAggregate(true), true);
+
+        config.publicMetaDbFallbackMode = 'compare';
+        assert.equal(ratingService.shouldResolveFallbackAggregate(false), true);
+        assert.equal(ratingService.shouldResolveFallbackAggregate(true), true);
+        assert.deepEqual(
+            ratingService.fallbackAggregateResultsForFinalization('compare', [
+                { source: 'RT', value: '90/100' },
+            ]),
+            []
+        );
+        assert.deepEqual(
+            ratingService.fallbackAggregateResultsForFinalization('force', [
+                { source: 'RT', value: '90/100' },
+            ]),
+            [{ source: 'RT', value: '90/100' }]
+        );
 
         config.publicMetaDbFallbackMode = 'off';
         assert.equal(ratingService.shouldResolveFallbackAggregate(false), false);

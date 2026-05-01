@@ -48,9 +48,14 @@ function shouldResolveFallbackAggregate(hasPrimaryRatings) {
     const mode = publicMetaDbFallbackMode();
 
     if (mode === 'off') return false;
-    if (mode === 'force') return true;
+    if (mode === 'force' || mode === 'compare') return true;
 
     return !hasPrimaryRatings;
+}
+
+function fallbackAggregateResultsForFinalization(mode, results) {
+    if (mode === 'compare') return [];
+    return Array.isArray(results) ? results : [];
 }
 
 function safetySourceMode(userConfig = config.userConfig) {
@@ -467,9 +472,17 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
             return result;
         })()
         : [];
-    const metaResults = Array.isArray(fallbackAggregateResults)
-        ? fallbackAggregateResults
-        : [];
+    const metaResults = fallbackAggregateResultsForFinalization(
+        pmdbFallbackMode,
+        fallbackAggregateResults
+    );
+
+    if (pmdbFallbackMode === 'compare' && Array.isArray(fallbackAggregateResults) && fallbackAggregateResults.length > 0) {
+        logger.info(
+            `[PublicMetaDB] Compare mode fetched ${fallbackAggregateResults.length} mapped rating(s); ` +
+            'leaving final stream output unchanged'
+        );
+    }
 
     const mdblistDerivedResults = safetySourceMode(userConfig) === 'direct'
         ? []
@@ -617,4 +630,5 @@ module.exports = {
     runWithInFlight,
     publicMetaDbFallbackMode,
     shouldResolveFallbackAggregate,
+    fallbackAggregateResultsForFinalization,
 };

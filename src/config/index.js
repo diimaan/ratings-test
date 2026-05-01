@@ -19,7 +19,7 @@ const requestTimeoutMs = parsePositiveInt(
 
 function normalizePublicMetaDbFallbackMode(value) {
     const normalized = String(value || 'auto').trim().toLowerCase();
-    return ['auto', 'force', 'off'].includes(normalized) ? normalized : 'auto';
+    return ['auto', 'compare', 'force', 'off'].includes(normalized) ? normalized : 'auto';
 }
 
 const config = {
