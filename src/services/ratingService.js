@@ -282,8 +282,13 @@ async function resolveDirectSafetyRatings(type, rawId, streamInfo, userConfig = 
     if (!shouldUseDirectSafety(userConfig)) return [];
 
     const results = [];
+    const timings = {
+        commonSense: 0,
+        cringe: 0,
+    };
 
     if (providers.commonSenseProvider) {
+        const startedAt = Date.now();
         try {
             const commonSense = await providers.commonSenseProvider.getBoth(type, rawId, streamInfo);
             if (commonSense?.ageRating) {
@@ -294,17 +299,27 @@ async function resolveDirectSafetyRatings(type, rawId, streamInfo, userConfig = 
             }
         } catch (err) {
             logger.warn(`Common Sense direct safety failed for ${rawId}: ${err.message}`);
+        } finally {
+            timings.commonSense = elapsedMs(startedAt);
         }
     }
 
     if (providers.cringeMdbProvider) {
+        const startedAt = Date.now();
         try {
             const cringe = await providers.cringeMdbProvider.getRating(type, rawId, streamInfo);
             results.push(...splitSafetyBlock(cringe));
         } catch (err) {
             logger.warn(`CringeMDB direct safety failed for ${rawId}: ${err.message}`);
+        } finally {
+            timings.cringe = elapsedMs(startedAt);
         }
     }
+
+    logger.info(
+        `[DirectSafety] ${rawId}: commonSense=${timings.commonSense}ms ` +
+        `cringe=${timings.cringe}ms results=${results.length}`
+    );
 
     return results;
 }
