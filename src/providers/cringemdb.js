@@ -57,19 +57,30 @@ function normalizeFlag(text) {
     return null;
 }
 
+function explicitVerdictText($) {
+    return [
+        ...$('.badge, h1, h2, h3, h4, p, span, div')
+            .map((_, el) => cleanText($(el).text()))
+            .get(),
+        cleanText($('body').text()),
+    ].filter(Boolean);
+}
+
 function extractCertification($) {
-    const badge = cleanText($('.badge').first().text());
+    const candidates = explicitVerdictText($);
 
-    if (!badge) return null;
-
-    if (/not parent safe/i.test(badge)) {
-        logger.debug(`[${PROVIDER_NAME}] Certification: Not Parent Safe`);
-        return 'unsafe';
+    for (const text of candidates) {
+        if (/not\s+parent[-\s]?safe/i.test(text)) {
+            logger.debug(`[${PROVIDER_NAME}] Certification: Not Parent Safe`);
+            return 'unsafe';
+        }
     }
 
-    if (/parent safe/i.test(badge)) {
-        logger.debug(`[${PROVIDER_NAME}] Certification: Certified Parent Safe`);
-        return 'safe';
+    for (const text of candidates) {
+        if (/certified\s+parent[-\s]?safe|parent[-\s]?safe/i.test(text)) {
+            logger.debug(`[${PROVIDER_NAME}] Certification: Certified Parent Safe`);
+            return 'safe';
+        }
     }
 
     return null;
@@ -98,11 +109,11 @@ function buildWarningOutput(certification, flags, url) {
         lines.push('✅ Certified Parent Safe');
     } else if (certification === 'unsafe') {
         lines.push('⚠️ Not Parent Safe');
-    }
 
-    if (flags && flags.length) {
-        for (const category of flags) {
-            lines.push(getWarningLabel(category));
+        if (flags && flags.length) {
+            for (const category of flags) {
+                lines.push(getWarningLabel(category));
+            }
         }
     }
 
@@ -143,4 +154,8 @@ async function getRating(type, _imdbId, streamInfo) {
 module.exports = {
     name: PROVIDER_NAME,
     getRating,
+    _test: {
+        extractCertification,
+        buildWarningOutput,
+    },
 };
