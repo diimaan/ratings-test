@@ -46,7 +46,7 @@ function parseJsonLd($) {
                 const val = parseInt(String(json.aggregateRating.ratingValue).replace('%', ''), 10);
                 if (!isNaN(val)) {
                     criticRating = {
-                        source: 'RT',
+                        source: 'Rotten Tomatoes',
                         value: `${val}/100`,
                     };
                 }
@@ -64,7 +64,7 @@ function scrapeDom($) {
 
     if (/^\d+$/.test(critic)) {
         return {
-            source: 'RT',
+            source: 'Rotten Tomatoes',
             value: `${critic}/100`,
         };
     }

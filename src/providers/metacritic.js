@@ -27,7 +27,7 @@ function scrapeMetacriticPage(html, url) {
 
         if (score >= 0 && score <= 100) {
             return {
-                source: 'MC',
+                source: 'Metacritic',
                 value: `${score}/100`,
                 url,
             };

@@ -10,12 +10,12 @@ function normalizePmdbSource(code, type) {
   const map = {
     IM: scopeSuffix ? `IMDb ${scopeSuffix}` : 'IMDb',
     TM: scopeSuffix ? `TMDb ${scopeSuffix}` : 'TMDb',
-    MC: 'MC',
-    RT: 'RT',
-    PC: 'PC',
+    MC: 'Metacritic',
+    RT: 'Rotten Tomatoes',
+    PC: 'Popcornmeter',
     TR: 'Trakt',
     LB: 'Letterboxd',
-    MA: 'MAL',
+    MA: 'MyAnimeList',
     RE: 'Roger Ebert',
   };
 

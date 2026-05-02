@@ -8,13 +8,13 @@ function mapLabel(label) {
     switch (String(label || '').trim().toUpperCase()) {
         case 'IM': return 'IMDb';
         case 'TM': return 'TMDb';
-        case 'MC': return 'MC';
-        case 'RT': return 'RT';
-        case 'PC': return 'PC';
+        case 'MC': return 'Metacritic';
+        case 'RT': return 'Rotten Tomatoes';
+        case 'PC': return 'Popcornmeter';
         case 'TR': return 'Trakt';
         case 'LB': return 'Letterboxd';
         case 'RE': return 'Roger Ebert';
-        case 'MAL': return 'MAL';
+        case 'MAL': return 'MyAnimeList';
         default: return null;
     }
 }

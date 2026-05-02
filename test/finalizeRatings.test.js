@@ -39,15 +39,15 @@ test('prioritizes local IMDb and native TMDb over aggregate fallback results', (
         mdblistResults: [
             { source: 'IMDb', value: '6.9/10' },
             { source: 'TMDb', value: '68/100' },
-            { source: 'MC', value: '73/100' },
+            { source: 'Metacritic', value: '73/100' },
         ],
         userConfig: userConfig({
-            enabled: ['IMDb (Movie)', 'TMDb (Movie)', 'MC'],
-            order: ['IMDb (Movie)', 'TMDb (Movie)', 'MC'],
+            enabled: ['IMDb (Movie)', 'TMDb (Movie)', 'Metacritic'],
+            order: ['IMDb (Movie)', 'TMDb (Movie)', 'Metacritic'],
         }),
     });
 
-    assert.deepEqual(ratings.map(item => item.source), ['IMDb (Movie)', 'TMDb (Movie)', 'MC']);
+    assert.deepEqual(ratings.map(item => item.source), ['IMDb (Movie)', 'TMDb (Movie)', 'Metacritic']);
     assert.equal(ratings[0].value, '8.7/10');
     assert.equal(ratings[1].value, '82/100');
     assert.equal(ratings[2].value, '73/100');
@@ -110,16 +110,16 @@ test('honors custom rating order after provider family selection', () => {
         directSafetyResults: [],
         mdblistDerivedResults: [{ source: 'Common Sense', value: '16+' }],
         metaResults: [],
-        mdblistResults: [{ source: 'MC', value: '73/100' }],
+        mdblistResults: [{ source: 'Metacritic', value: '73/100' }],
         userConfig: userConfig({
-            enabled: ['Common Sense', 'MC', 'TMDb (Movie)', 'IMDb (Movie)'],
-            order: ['Common Sense', 'MC', 'TMDb (Movie)', 'IMDb (Movie)'],
+            enabled: ['Common Sense', 'Metacritic', 'TMDb (Movie)', 'IMDb (Movie)'],
+            order: ['Common Sense', 'Metacritic', 'TMDb (Movie)', 'IMDb (Movie)'],
         }),
     });
 
     assert.deepEqual(
         ratings.map(item => item.source),
-        ['Common Sense', 'MC', 'TMDb (Movie)', 'IMDb (Movie)']
+        ['Common Sense', 'Metacritic', 'TMDb (Movie)', 'IMDb (Movie)']
     );
 });
 

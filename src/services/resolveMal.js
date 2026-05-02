@@ -28,7 +28,7 @@ async function resolveMalRatings(
     const mdblistFlat = flattenResults(mdblistResults);
     const metaFlat = flattenResults(metaResults);
 
-    const mdblistFamily = pickFirstValidFromArray(mdblistFlat, 'MAL', type);
+    const mdblistFamily = pickFirstValidFromArray(mdblistFlat, 'MyAnimeList', type);
     const mdblistMetadata = findMdblistMetadata(mdblistFlat);
 
     const looksAnime = isLikelyAnimeFromMdblistMetadata(mdblistMetadata);
@@ -43,10 +43,10 @@ async function resolveMalRatings(
     if (malId && providers.jikanProvider?.getByMalId) {
         try {
             const jikan = await providers.jikanProvider.getByMalId(malId, userConfig);
-            if (jikan && isDisplayableRatingValue('MAL', jikan.value)) {
+            if (jikan && isDisplayableRatingValue('MyAnimeList', jikan.value)) {
                 logger.info('MAL rating found via Jikan MAL ID');
                 return [{
-                    source: 'MAL',
+                    source: 'MyAnimeList',
                     value: jikan.value,
                 }];
             }
@@ -60,7 +60,7 @@ async function resolveMalRatings(
         return [mdblistFamily];
     }
 
-    const pmdbFamily = pickFirstValidFromArray(metaFlat, 'MAL', type);
+    const pmdbFamily = pickFirstValidFromArray(metaFlat, 'MyAnimeList', type);
     if (pmdbFamily) {
         logger.info('MAL rating found via PMDB');
         return [pmdbFamily];
@@ -80,10 +80,10 @@ async function resolveMalRatings(
             userConfig
         );
 
-        if (jikanFallback && isDisplayableRatingValue('MAL', jikanFallback.value)) {
+        if (jikanFallback && isDisplayableRatingValue('MyAnimeList', jikanFallback.value)) {
             logger.info('MAL rating found via Jikan search fallback');
             return [{
-                source: 'MAL',
+                source: 'MyAnimeList',
                 value: jikanFallback.value,
             }];
         }

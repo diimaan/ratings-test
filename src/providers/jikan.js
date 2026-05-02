@@ -124,7 +124,7 @@ async function getByMalId(malId, userConfig = config.userConfig) {
         if (!value) return null;
 
         return {
-            source: 'MAL',
+            source: 'MyAnimeList',
             value,
         };
     } catch (err) {
@@ -184,7 +184,7 @@ async function searchByTitle(streamInfo, type, userConfig = config.userConfig) {
         );
 
         return {
-            source: 'MAL',
+            source: 'MyAnimeList',
             value,
         };
     } catch (err) {

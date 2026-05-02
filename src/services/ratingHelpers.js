@@ -17,7 +17,14 @@ function normalizeOtherSourceLabel(source, type) {
     if (s === 'TMDb') return tmdbLabel(type, false);
     if (s === 'TMDb Episode') return tmdbLabel(type, true);
 
-    return s;
+    const sourceAliases = {
+        MC: 'Metacritic',
+        RT: 'Rotten Tomatoes',
+        PC: 'Popcornmeter',
+        MAL: 'MyAnimeList',
+    };
+
+    return sourceAliases[s] || s;
 }
 
 function sourceFamily(label) {
@@ -29,12 +36,12 @@ function sourceFamily(label) {
     if (label === 'Sex & Nudity') return 'Sex & Nudity';
     if (label.startsWith('IMDb (')) return 'IMDb';
     if (label.startsWith('TMDb (')) return 'TMDb';
-    if (label === 'MC') return 'MC';
-    if (label === 'RT') return 'RT';
-    if (label === 'PC') return 'PC';
+    if (label === 'Metacritic') return 'Metacritic';
+    if (label === 'Rotten Tomatoes') return 'Rotten Tomatoes';
+    if (label === 'Popcornmeter') return 'Popcornmeter';
     if (label === 'MDBList') return 'MDBList';
     if (label === 'Trakt') return 'Trakt';
-    if (label === 'MAL') return 'MAL';
+    if (label === 'MyAnimeList') return 'MyAnimeList';
     if (label === 'Letterboxd') return 'Letterboxd';
     if (label === 'Roger Ebert') return 'Roger Ebert';
     return label;
@@ -106,6 +113,10 @@ function sourceMatchesEnabled(source, enabledList) {
         'IMDb Episode': ['IMDb (Episode)'],
         'TMDb': ['TMDb (Movie)', 'TMDb (Show)', 'TMDb (Episode)'],
         'TMDb Episode': ['TMDb (Episode)'],
+        'MC': ['Metacritic'],
+        'RT': ['Rotten Tomatoes'],
+        'PC': ['Popcornmeter'],
+        'MAL': ['MyAnimeList'],
         'Content Safety': ['Common Sense', 'Parent Safe', 'Not Safe', 'Sexual Violence', 'Sex & Nudity'],
         'Common Sense': ['Parent Safe'],
         'Not Safe': ['Parent Safe'],
@@ -128,6 +139,10 @@ function orderIndexForSource(source, orderList) {
         'IMDb Episode': ['IMDb (Episode)'],
         'TMDb': ['TMDb (Movie)', 'TMDb (Show)', 'TMDb (Episode)'],
         'TMDb Episode': ['TMDb (Episode)'],
+        'MC': ['Metacritic'],
+        'RT': ['Rotten Tomatoes'],
+        'PC': ['Popcornmeter'],
+        'MAL': ['MyAnimeList'],
         'Common Sense': ['Parent Safe'],
         'Not Safe': ['Parent Safe'],
     };

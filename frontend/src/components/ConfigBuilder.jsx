@@ -11,7 +11,7 @@ const providerDefaults = {
 
 const safetyRatingAliases = ['Common Sense', 'Parent Safe', 'Not Safe', 'Sexual Violence', 'Sex & Nudity'];
 
-const ratingLabels = {
+const ratingAliases = {
   'MC': 'Metacritic',
   'RT': 'Rotten Tomatoes',
   'PC': 'Popcornmeter',
@@ -25,11 +25,11 @@ const fallbackRatings = [
   'TMDb (Movie)',
   'TMDb (Show)',
   'TMDb (Episode)',
-  'MC',
-  'RT',
-  'PC',
+  'Metacritic',
+  'Rotten Tomatoes',
+  'Popcornmeter',
   'Trakt',
-  'MAL',
+  'MyAnimeList',
   'Letterboxd',
   'Roger Ebert',
 ];
@@ -47,14 +47,16 @@ function normalizeRatingListForUi(list = fallbackRatings) {
 
   list.forEach((rating) => {
     if (rating === 'Content Safety' || safetyRatingAliases.includes(rating)) return;
-    if (!next.includes(rating)) next.push(rating);
+
+    const normalized = ratingAliases[rating] || rating;
+    if (!next.includes(normalized)) next.push(normalized);
   });
 
   return next;
 }
 
 function ratingLabel(rating) {
-  return ratingLabels[rating] || rating;
+  return ratingAliases[rating] || rating;
 }
 
 function uniqueOrderedRatings(defaults) {

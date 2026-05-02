@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
     orderIndexForSource,
+    processSingleRating,
     sourceMatchesEnabled,
 } = require('../src/services/ratingHelpers');
 
@@ -30,4 +31,36 @@ test('does not use Content Safety as a sorting control', () => {
 test('orders Parent Safe beside existing safety-related config entries', () => {
     assert.equal(orderIndexForSource('Parent Safe', ['Common Sense', 'IMDb']), 0);
     assert.equal(orderIndexForSource('Parent Safe', ['Not Safe', 'IMDb']), 0);
+});
+
+
+test('normalizes legacy short rating labels to public names', () => {
+    assert.deepEqual(processSingleRating({ source: 'MC', value: '73/100' }, 'movie'), {
+        source: 'Metacritic',
+        value: '73/100',
+    });
+    assert.deepEqual(processSingleRating({ source: 'RT', value: '88/100' }, 'movie'), {
+        source: 'Rotten Tomatoes',
+        value: '88/100',
+    });
+    assert.deepEqual(processSingleRating({ source: 'PC', value: '90/100' }, 'movie'), {
+        source: 'Popcornmeter',
+        value: '90/100',
+    });
+    assert.deepEqual(processSingleRating({ source: 'MAL', value: '8.1/10' }, 'series'), {
+        source: 'MyAnimeList',
+        value: '8.1/10',
+    });
+});
+
+test('keeps old short labels working in saved config filters and order', () => {
+    assert.equal(sourceMatchesEnabled('Metacritic', ['MC']), true);
+    assert.equal(sourceMatchesEnabled('Rotten Tomatoes', ['RT']), true);
+    assert.equal(sourceMatchesEnabled('Popcornmeter', ['PC']), true);
+    assert.equal(sourceMatchesEnabled('MyAnimeList', ['MAL']), true);
+
+    assert.equal(orderIndexForSource('Metacritic', ['IMDb', 'MC']), 1);
+    assert.equal(orderIndexForSource('Rotten Tomatoes', ['RT', 'IMDb']), 0);
+    assert.equal(orderIndexForSource('Popcornmeter', ['IMDb', 'PC']), 1);
+    assert.equal(orderIndexForSource('MyAnimeList', ['MAL', 'IMDb']), 0);
 });

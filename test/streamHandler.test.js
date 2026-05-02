@@ -32,10 +32,10 @@ function userConfig(displayMode = 'compact', limit = 4) {
 test('compact movie output prioritizes native IMDb and TMDb before fallback ratings', async () => {
     const originalGetRatings = ratingService.getRatings;
     ratingService.getRatings = async () => [
-        { source: 'MC', value: '73/100' },
+        { source: 'Metacritic', value: '73/100' },
         { source: 'IMDb (Movie)', value: '8.7/10' },
         { source: 'TMDb (Movie)', value: '82/100' },
-        { source: 'RT', value: '88/100' },
+        { source: 'Rotten Tomatoes', value: '88/100' },
     ];
 
     try {
@@ -47,8 +47,8 @@ test('compact movie output prioritizes native IMDb and TMDb before fallback rati
 
         assert.equal(payload.streams.length, 1);
         assert.match(payload.streams[0].description, /🎬 IMDb 8.7 \| 🎬 TMDb 82/);
-        assert.doesNotMatch(payload.streams[0].description, /MC/);
-        assert.doesNotMatch(payload.streams[0].description, /RT/);
+        assert.doesNotMatch(payload.streams[0].description, /Metacritic/);
+        assert.doesNotMatch(payload.streams[0].description, /Rotten Tomatoes/);
     } finally {
         ratingService.getRatings = originalGetRatings;
     }

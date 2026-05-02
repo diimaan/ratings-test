@@ -17,12 +17,12 @@ const RATING_PRIORITY = {
     'Sex & Nudity': ['DIRECT', 'MDBDERIVED'],
     IMDb: ['LOCAL', 'PMDB', 'MDBLIST'],
     TMDb: ['LOCAL', 'PMDB', 'MDBLIST'],
-    MAL: ['JIKAN_ID', 'MDBLIST', 'PMDB'],
+    MyAnimeList: ['JIKAN_ID', 'MDBLIST', 'PMDB'],
     Letterboxd: ['MDBLIST', 'PMDB'],
     MDBList: ['MDBLIST'],
-    MC: ['PMDB', 'MDBLIST'],
-    RT: ['PMDB', 'MDBLIST'],
-    PC: ['PMDB', 'MDBLIST'],
+    Metacritic: ['PMDB', 'MDBLIST'],
+    'Rotten Tomatoes': ['PMDB', 'MDBLIST'],
+    Popcornmeter: ['PMDB', 'MDBLIST'],
     Trakt: ['PMDB', 'MDBLIST'],
     'Roger Ebert': ['MDBLIST', 'PMDB'],
 };
@@ -123,15 +123,15 @@ function finalizeRatings({
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
-        MC: {
+        Metacritic: {
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
-        RT: {
+        'Rotten Tomatoes': {
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
-        PC: {
+        Popcornmeter: {
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
@@ -139,7 +139,7 @@ function finalizeRatings({
             PMDB: metaFlat,
             MDBLIST: mdblistFlat,
         },
-        MAL: {
+        MyAnimeList: {
             JIKAN_ID: malFlat,
             MDBLIST: mdblistFlat,
             PMDB: metaFlat,
