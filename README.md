@@ -34,7 +34,7 @@ Still planned:
 
 - More UI polish
 - Full IMDb LMDB ingestion test on VPS dataset files
-- Automated tests for provider fallback and rating display behavior
+- Recorded-fixture tests for MDBList and CringeMDB response shapes
 - More complete production hardening
 
 ## Configuration Model
