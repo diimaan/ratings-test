@@ -8,7 +8,7 @@ const redisClient = require('./cache/redisClient');
 const imdbDataset = require('./utils/imdbLmdbDataset');
 const stremioConfigRoutes = require('./routes/stremioConfigRoutes');
 const configApiRoutes = require('./routes/configApiRoutes');
-const sqliteStore = require('./storage/sqliteStore');
+const userConfigStore = require('./storage/userConfigStore');
 const lmdbStore = require('./storage/lmdbStore');
 const jsonErrorHandler = require('./middleware/jsonErrorHandler');
 
@@ -47,6 +47,16 @@ async function startServer() {
     }
 
     // =========================
+    // User-config store init
+    // =========================
+    try {
+        await userConfigStore.init();
+    } catch (err) {
+        logger.error(`User-config store failed to initialize: ${err.message}`);
+        process.exit(1);
+    }
+
+    // =========================
     // IMDb Dataset Init
     // =========================
     (async () => {
@@ -79,16 +89,16 @@ async function startServer() {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 
-    app.get('/health', (_req, res) => {
-        const sqlite = sqliteStore.health();
+    app.get('/health', async (_req, res) => {
+        const userConfigStoreHealth = await userConfigStore.health();
         const lmdb = lmdbStore.health();
-        const storageOk = sqlite.ok && lmdb.ok;
+        const storageOk = userConfigStoreHealth.ok && lmdb.ok;
 
         res.json({
             status: storageOk ? 'ok' : 'degraded',
             redis: redisClient.isReady(),
             storage: {
-                sqlite,
+                userConfig: userConfigStoreHealth,
                 lmdb,
             },
             uptime: process.uptime(),
@@ -116,7 +126,7 @@ async function startServer() {
 async function shutdown(signal) {
     logger.warn(`Received ${signal}. Shutting down...`);
     await redisClient.disconnect();
-    sqliteStore.close();
+    await userConfigStore.close();
     lmdbStore.close();
     logger.info('Shutdown complete.');
     process.exit(0);
