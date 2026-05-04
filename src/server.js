@@ -37,13 +37,35 @@ async function startServer() {
     // =========================
     // Redis Initialization
     // =========================
+    // Redis is required: caching, in-flight result coalescing, and the
+    // IMDb hot cache all depend on it. Fail fast at startup so the
+    // orchestrator surfaces the misconfiguration instead of letting the
+    // service run in a degraded state.
     try {
         if (!redisClient.isReady()) {
             await redisClient.connect();
         }
+
+        const ready = await waitForRedisReady(
+            config.redis.startupReadyAttempts,
+            config.redis.startupReadyDelayMs
+        );
+
+        if (!ready) {
+            throw new Error(
+                `Redis at ${config.redis.url} did not become ready within ` +
+                `${config.redis.startupReadyAttempts * config.redis.startupReadyDelayMs}ms.`
+            );
+        }
+
         logger.info('Redis connected successfully.');
     } catch (err) {
-        logger.warn('Redis unavailable:', err.message);
+        if (config.redis.required) {
+            logger.error(`Redis is required but unavailable: ${err.message}`);
+            process.exit(1);
+        }
+
+        logger.warn(`Redis unavailable (REDIS_REQUIRED=false): ${err.message}`);
     }
 
     // =========================
@@ -51,7 +73,6 @@ async function startServer() {
     // =========================
     (async () => {
         try {
-            await waitForRedisReady(20, 500);
             await imdbDataset.init();
             logger.info('IMDb dataset initialization task completed.');
         } catch (err) {
