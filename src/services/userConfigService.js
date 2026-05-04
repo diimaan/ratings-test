@@ -88,19 +88,28 @@ function privateConfigView(userConfig) {
     };
 }
 
-function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString('base64url');
-    const hash = crypto.scryptSync(String(password), salt, PASSWORD_KEY_LENGTH).toString('base64url');
-    return `${PASSWORD_HASH_PREFIX}:${salt}:${hash}`;
+function scryptAsync(password, salt, keyLength) {
+    return new Promise((resolve, reject) => {
+        crypto.scrypt(String(password), salt, keyLength, (err, derived) => {
+            if (err) reject(err);
+            else resolve(derived);
+        });
+    });
 }
 
-function verifyPassword(password, passwordHash) {
+async function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('base64url');
+    const derived = await scryptAsync(password, salt, PASSWORD_KEY_LENGTH);
+    return `${PASSWORD_HASH_PREFIX}:${salt}:${derived.toString('base64url')}`;
+}
+
+async function verifyPassword(password, passwordHash) {
     if (!password || !passwordHash) return false;
 
     const [prefix, salt, storedHash] = String(passwordHash).split(':');
     if (prefix !== PASSWORD_HASH_PREFIX || !salt || !storedHash) return false;
 
-    const candidate = crypto.scryptSync(String(password), salt, PASSWORD_KEY_LENGTH);
+    const candidate = await scryptAsync(password, salt, PASSWORD_KEY_LENGTH);
     const stored = Buffer.from(storedHash, 'base64url');
 
     if (candidate.length !== stored.length) return false;
@@ -125,13 +134,14 @@ async function createUserConfig(input = {}) {
     }, config.userConfig));
 
     await validateUserConfigProviders(userConfig);
-    sqliteStore.saveUserConfig(userConfig, hashPassword(input.password));
+    const passwordHash = await hashPassword(input.password);
+    sqliteStore.saveUserConfig(userConfig, passwordHash);
     return userConfig;
 }
 
 async function getUserConfigForPassword(configId, password) {
     const record = sqliteStore.getUserConfigRecord(configId);
-    if (!record || !verifyPassword(password, record.passwordHash)) {
+    if (!record || !(await verifyPassword(password, record.passwordHash))) {
         const err = new Error('Invalid config UUID or password.');
         err.statusCode = 401;
         throw err;
@@ -160,7 +170,8 @@ async function deleteUserConfig(configId, password) {
 async function changeUserConfigPassword(configId, currentPassword, newPassword) {
     await getUserConfigForPassword(configId, currentPassword);
     assertValidPassword(newPassword);
-    return sqliteStore.setUserConfigPasswordHash(configId, hashPassword(newPassword));
+    const passwordHash = await hashPassword(newPassword);
+    return sqliteStore.setUserConfigPasswordHash(configId, passwordHash);
 }
 
 module.exports = {

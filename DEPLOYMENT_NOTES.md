@@ -32,6 +32,11 @@ The local setup avoids those production assumptions and instead uses:
 
 ## Operational notes
 
+- This service is intended to run as a single replica per stack.
+  Two pieces of state are process-local and would not be shared across
+  replicas: the in-process rate limiter for `/api/config/*` and the
+  in-flight request coalescing in the rating service. Horizontal scaling
+  would require moving both to Redis.
 - Redis is local to this stack and used for hot cache / final result cache
 - SQLite stores user config and structured app data
 - Provider keys inside saved user configs are encrypted with `CONFIG_ENCRYPTION_SECRET`
