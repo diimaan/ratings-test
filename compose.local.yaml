@@ -24,7 +24,10 @@ services:
       JIKAN_API_URL: ${JIKAN_API_URL:-https://api.jikan.moe/v4}
       REDIS_URL: redis://redis:6379
       REDIS_REQUIRED: ${REDIS_REQUIRED:-true}
+      CONFIG_STORE_DRIVER: ${CONFIG_STORE_DRIVER:-sqlite}
       SQLITE_DB_PATH: /app/data/app/ratings.sqlite
+      CONFIG_DATABASE_URL: ${CONFIG_DATABASE_URL:-}
+      CONFIG_DATABASE_SSL: ${CONFIG_DATABASE_SSL:-}
       LMDB_DATA_DIR: /app/data/lmdb
       CONFIG_ENCRYPTION_SECRET: ${CONFIG_ENCRYPTION_SECRET:-local-dev-change-me}
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-86400}

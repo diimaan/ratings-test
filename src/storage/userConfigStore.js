@@ -1,10 +1,10 @@
 const config = require('../config');
 const logger = require('../utils/logger');
-const sqliteDriver = require('./drivers/sqliteUserConfigDriver');
 
 // Lazy-loaded so that drivers we don't use don't pull in their deps.
 const driverFactories = {
-    sqlite: () => sqliteDriver,
+    sqlite: () => require('./drivers/sqliteUserConfigDriver'),
+    postgres: () => require('./drivers/postgresUserConfigDriver'),
 };
 
 let activeDriver = null;
