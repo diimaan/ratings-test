@@ -25,7 +25,7 @@ providerValidation.validateUserConfigProviders = async () => {};
 const configApiRoutes = require('../src/routes/configApiRoutes');
 const stremioConfigRoutes = require('../src/routes/stremioConfigRoutes');
 const jsonErrorHandler = require('../src/middleware/jsonErrorHandler');
-const sqliteStore = require('../src/storage/sqliteStore');
+const userConfigStore = require('../src/storage/userConfigStore');
 
 function createTestApp() {
     const app = express();
@@ -91,7 +91,7 @@ test('config routes create, retrieve, update, reject wrong password, and delete 
 
     t.after(async () => {
         await closeServer(server);
-        sqliteStore.close();
+        await userConfigStore.close();
     });
 
     const createPayload = {
@@ -200,7 +200,7 @@ test('BYOB addon routes keep base/default streams disabled', async (t) => {
 
     t.after(async () => {
         await closeServer(server);
-        sqliteStore.close();
+        await userConfigStore.close();
     });
 
     const manifest = await requestJson(baseUrl, '/manifest.json', {
