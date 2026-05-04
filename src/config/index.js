@@ -36,6 +36,13 @@ const config = {
     jikan: userConfig.providers.jikan,
     redis: {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
+        // Redis is required by default. Set REDIS_REQUIRED=false for
+        // local dev or test runs without a running Redis instance.
+        required: !['false', '0', 'no', 'off'].includes(
+            String(process.env.REDIS_REQUIRED ?? 'true').trim().toLowerCase()
+        ),
+        startupReadyAttempts: parsePositiveInt(process.env.REDIS_STARTUP_READY_ATTEMPTS, 20),
+        startupReadyDelayMs: parsePositiveInt(process.env.REDIS_STARTUP_READY_DELAY_MS, 500),
     },
     storage: {
         sqlitePath: process.env.SQLITE_DB_PATH || '/app/data/app/ratings.sqlite',
