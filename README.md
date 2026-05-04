@@ -7,7 +7,7 @@ Ratings Aggregator is a self-hostable Stremio addon for showing movie and series
 - Public MetaDB as an experimental fallback when MDBList is unavailable or empty
 - Derived age and warning signals from structured metadata where available
 - UUID-based per-user configuration
-- SQLite for user configs
+- SQLite or Postgres for user configs (selected via `CONFIG_STORE_DRIVER`)
 - LMDB for local IMDb episode lookup data
 - Redis for hot cache and final result cache
 
@@ -68,13 +68,26 @@ TMDB_API_KEY="..."
 MDBLIST_API_KEY="..."
 PUBLICMETADB_API_KEY=""
 REDIS_URL="redis://ratings-redis:6379"
-SQLITE_DB_PATH="/app/data/app/ratings.sqlite"
+CONFIG_STORE_DRIVER=sqlite                     # or "postgres"
+SQLITE_DB_PATH="/app/data/app/ratings.sqlite"  # used when driver=sqlite
+CONFIG_DATABASE_URL=""                         # used when driver=postgres
 LMDB_DATA_DIR="/app/data/lmdb"
 CONFIG_ENCRYPTION_SECRET="CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
 IMDB_DATASET_MODE=required
 IMDB_DATA_DIR="/app/data/imdb"
 SAFETY_SOURCE=hybrid
 ```
+
+### User-config store backends
+
+- `CONFIG_STORE_DRIVER=sqlite` (default): single-file database at
+  `SQLITE_DB_PATH`. Suitable for self-hosting one container with a bind
+  mount.
+- `CONFIG_STORE_DRIVER=postgres`: requires `CONFIG_DATABASE_URL` (or the
+  standard `DATABASE_URL`). Recommended for shared / managed
+  deployments. The driver creates the `user_configs` table and updated_at
+  trigger on first start. For managed Postgres with TLS, set
+  `CONFIG_DATABASE_SSL=require`.
 
 `CONFIG_ENCRYPTION_SECRET` must remain stable. If it changes, existing encrypted provider keys cannot be decrypted.
 
