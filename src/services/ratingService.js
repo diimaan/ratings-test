@@ -24,8 +24,25 @@ const {
 } = require('./finalizeRatings');
 
 const CACHE_PREFIX = 'ratings:';
+const STALE_CACHE_SUFFIX = ':stale';
 const NO_RATINGS_MARKER = '___NO_RATINGS___';
 const inFlightRequests = new Map();
+
+function staleCacheKey(cacheKey) {
+    return `${cacheKey}${STALE_CACHE_SUFFIX}`;
+}
+
+function staleFallbackTtlSeconds() {
+    // Long-lived backup retained so that rate-limited fetches can serve
+    // last-known-good ratings instead of empty streams.
+    return config.cache.staleFallbackTtlSeconds;
+}
+
+function hasRateLimitedProvider(results) {
+    return flattenResults(results).some(item =>
+        item?._providerStatus?.rateLimited === true
+    );
+}
 
 // Provider strategy:
 // - Local IMDb LMDB and native TMDb stay authoritative for their own families.
@@ -541,20 +558,31 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
     );
     logger.debug(`[Ratings] Final ratings: ${JSON.stringify(finalRatings)}`);
 
+    const aggregateRateLimited =
+        hasRateLimitedProvider(mdblistResults) ||
+        hasRateLimitedProvider(metaResults);
+
     if (redisClient.isReady()) {
         try {
             if (primaryAggregateTransient) {
                 logger.warn(`Skipping cache write for ${rawId} because a primary aggregate provider had a transient failure`);
             } else if (finalRatings.length > 0) {
                 const ttl = calculateTTL(date, finalRatings.length);
-                const ok = await redisClient.setRatingsHash(cacheKey, finalRatings, ttl);
+                const staleTtl = staleFallbackTtlSeconds();
+                const [ok] = await Promise.all([
+                    redisClient.setRatingsHash(cacheKey, finalRatings, ttl),
+                    // Long-lived backup so rate-limited fetches can fall
+                    // back to last-known-good results.
+                    redisClient.setRatingsHash(staleCacheKey(cacheKey), finalRatings, staleTtl),
+                ]);
 
                 if (ok) {
-                    logger.debug(`Cached ${rawId} for ${ttl}s`);
+                    logger.debug(`Cached ${rawId} fresh=${ttl}s stale=${staleTtl}s`);
                 } else {
                     logger.warn(`Failed to cache ratings for ${rawId}`);
                 }
-            } else {
+            } else if (!aggregateRateLimited) {
+                // Genuinely empty (no rate limit). Negative-cache.
                 const ok = await redisClient.setNegativeMarker(
                     cacheKey,
                     NO_RATINGS_MARKER,
@@ -567,12 +595,36 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
                     logger.warn(`Failed to cache negative marker for ${rawId}`);
                 }
             }
+            // If empty AND rate-limited: don't cache anything (don't poison
+            // the negative cache; the next request might succeed).
         } catch (err) {
             logger.error(`Cache write error (${cacheKey}): ${err.message}`);
         }
     }
 
-    return finalRatings.length ? finalRatings : null;
+    if (finalRatings.length > 0) {
+        return finalRatings;
+    }
+
+    if (aggregateRateLimited) {
+        // Try to serve stale-fallback before giving up.
+        if (redisClient.isReady()) {
+            try {
+                const stale = await redisClient.getRatingsHash(staleCacheKey(cacheKey));
+                if (Array.isArray(stale) && stale.length > 0) {
+                    logger.warn(`[RateLimit] Serving stale fallback for ${rawId} (${stale.length} ratings)`);
+                    return stale;
+                }
+            } catch (err) {
+                logger.warn(`[RateLimit] Stale fallback lookup failed for ${rawId}: ${err.message}`);
+            }
+        }
+
+        logger.warn(`[RateLimit] No stale fallback available for ${rawId}; surfacing rate-limit signal`);
+        return { rateLimited: true };
+    }
+
+    return null;
 }
 
 function getInFlightRequestCount() {

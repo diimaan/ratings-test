@@ -244,3 +244,40 @@ test('hashes user agents for optional diagnostics without exposing raw values', 
     assert.equal(first.length, 12);
     assert.notEqual(first, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)');
 });
+
+test('rate-limited result returns a user-facing rate-limit stream', async () => {
+    const originalGetRatings = ratingService.getRatings;
+    ratingService.getRatings = async () => ({ rateLimited: true });
+
+    try {
+        const payload = await streamHandler({
+            type: 'movie',
+            id: 'tt0133093',
+            userConfig: userConfig('full'),
+        });
+
+        assert.equal(payload.streams.length, 1);
+        assert.match(payload.streams[0].name, /rate-limited/i);
+        assert.match(payload.streams[0].description, /rate-limited/i);
+        assert.match(payload.streams[0].description, /\/configure/);
+    } finally {
+        ratingService.getRatings = originalGetRatings;
+    }
+});
+
+test('null result keeps existing empty-streams behaviour (no rate-limit stream)', async () => {
+    const originalGetRatings = ratingService.getRatings;
+    ratingService.getRatings = async () => null;
+
+    try {
+        const payload = await streamHandler({
+            type: 'movie',
+            id: 'tt0133093',
+            userConfig: userConfig('full'),
+        });
+
+        assert.deepEqual(payload, { streams: [] });
+    } finally {
+        ratingService.getRatings = originalGetRatings;
+    }
+});

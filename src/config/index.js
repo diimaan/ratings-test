@@ -60,6 +60,9 @@ const config = {
     cache: {
         ttlSeconds: parsePositiveInt(process.env.CACHE_TTL_SECONDS, 259200),
         negativeTtlSeconds: parsePositiveInt(process.env.NEGATIVE_CACHE_TTL_SECONDS, 21600),
+        // Long-lived backup of successful results, used as fallback when
+        // upstream is rate-limited and the fresh cache has expired.
+        staleFallbackTtlSeconds: parsePositiveInt(process.env.STALE_FALLBACK_TTL_SECONDS, 14 * 86400),
     },
     ratings: userConfig.ratings,
     sources: {

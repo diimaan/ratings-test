@@ -360,6 +360,27 @@ function formatRatingsCard(ratings, type, userConfig = config.userConfig, reques
     return formatFullRatings(ratings);
 }
 
+function buildRateLimitedStream(id) {
+    const description = [
+        DIVIDER,
+        '⚠️ Ratings temporarily unavailable',
+        '',
+        'This addon instance is rate-limited on shared API keys.',
+        'Add your own keys at /configure to keep ratings working',
+        'without sharing the instance quota.',
+        DIVIDER,
+    ].join('\n');
+
+    return {
+        name: '⚠️ Ratings rate-limited',
+        description,
+        externalUrl: `${config.sources.imdbBaseUrl}/title/${id.split(':')[0]}/`,
+        behaviorHints: {
+            notWebReady: true,
+        },
+    };
+}
+
 async function streamHandler({ type, id, userConfig, requestHeaders = {} }) {
     const activeUserConfig = userConfig || config.userConfig;
 
@@ -370,7 +391,16 @@ async function streamHandler({ type, id, userConfig, requestHeaders = {} }) {
         return { streams: [] };
     }
 
-    const ratings = await ratingService.getRatings(type, id, { userConfig: activeUserConfig });
+    const result = await ratingService.getRatings(type, id, { userConfig: activeUserConfig });
+
+    if (result && typeof result === 'object' && !Array.isArray(result) && result.rateLimited) {
+        logger.warn(`Rate-limited and no stale fallback for ${id}; surfacing user-facing error stream`);
+        return {
+            streams: [buildRateLimitedStream(id)],
+        };
+    }
+
+    const ratings = Array.isArray(result) ? result : null;
 
     if (!Array.isArray(ratings) || ratings.length === 0) {
         logger.info(`No ratings resolved for ${id}`);

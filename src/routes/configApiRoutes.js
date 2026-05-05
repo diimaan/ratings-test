@@ -75,17 +75,13 @@ router.use('/api/config', configRateLimit);
 
 router.get('/api/config/defaults', asyncRoute(async (_req, res) => {
     const userConfig = await userConfigService.getDefaultUserConfig();
-    res.json(userConfigService.publicConfigView(userConfig));
+    res.json({
+        ...userConfigService.publicConfigView(userConfig),
+        instanceDefaults: userConfigService.instanceDefaultProvidersAvailable(),
+    });
 }));
 
 router.post('/api/config', asyncRoute(async (req, res) => {
-    if (!req.body?.providers?.tmdb?.apiKey) {
-        res.status(400).json({
-            error: 'TMDb API key is required for user configuration.',
-        });
-        return;
-    }
-
     if (!req.body?.password) {
         res.status(400).json({
             error: 'Config password is required.',
@@ -93,6 +89,9 @@ router.post('/api/config', asyncRoute(async (req, res) => {
         return;
     }
 
+    // TMDb key requirement is now enforced by provider validation, which
+    // accepts a user-supplied key OR an instance default if one is set in
+    // the operator env.
     const userConfig = await userConfigService.createUserConfig(req.body || {});
     const manifestPath = `/stremio/${encodeURIComponent(userConfig.id)}/manifest.json`;
 
@@ -118,13 +117,6 @@ router.post('/api/config/:configId/retrieve', asyncRoute(async (req, res) => {
 }));
 
 router.put('/api/config/:configId', asyncRoute(async (req, res) => {
-    if (!req.body?.providers?.tmdb?.apiKey) {
-        res.status(400).json({
-            error: 'TMDb API key is required for user configuration.',
-        });
-        return;
-    }
-
     const userConfig = await userConfigService.updateUserConfig(
         req.params.configId,
         req.body || {}

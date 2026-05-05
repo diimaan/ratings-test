@@ -26,7 +26,8 @@ Implemented:
 - Compact and full display modes
 - Rating enable/disable and ordering controls
 - Server-controlled Hybrid Conservative safety policy
-- SQLite config storage
+- Operator-supplied "instance default" provider keys with stale-fallback caching and a user-facing rate-limit message
+- SQLite or Postgres config storage
 - Redis result caching
 - LMDB-backed IMDb episode lookup foundation
 
@@ -77,6 +78,19 @@ IMDB_DATASET_MODE=required
 IMDB_DATA_DIR="/app/data/imdb"
 SAFETY_SOURCE=hybrid
 ```
+
+### Instance-default provider keys
+
+When `TMDB_API_KEY`, `MDBLIST_API_KEY`, or `PUBLICMETADB_API_KEY` are set in the operator env, users can leave the corresponding field blank in `/configure` and the server will use the operator's key at request time. The operator's key is never returned to clients (the configure UI shows an "Instance default available" hint instead).
+
+Quota and rate-limit considerations:
+
+- TMDb's free tier is generous (≈50 req/s, no daily cap) — sharing one key across many users is normally fine.
+- MDBList's free tier is **1000 calls/day per key**. A busy public instance will exhaust this. Either use a paid MDBList plan, or expect users to bring their own MDBList keys.
+- When upstream returns 429, the addon falls back to a long-TTL stale copy of the same title's last-known-good ratings (`STALE_FALLBACK_TTL_SECONDS`, default 14 days).
+- When stale fallback also misses, the addon surfaces a stream entitled `⚠️ Ratings rate-limited` with a prompt to add the user's own key at `/configure`.
+
+The user's saved config still stores their actual input. If the operator rotates an instance key, all empty-key users automatically pick up the new key on their next request, and the cache fingerprint changes so stale results from the old key are not served.
 
 ### User-config store backends
 
