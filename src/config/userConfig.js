@@ -52,6 +52,11 @@ function stableStringify(value) {
     return JSON.stringify(value);
 }
 
+// Cache fingerprint covers ONLY inputs that change which upstream data is
+// fetched. Render-only preferences (enabled, order, displayMode,
+// compactLimit) are applied at format time and must not invalidate the
+// cached upstream payload. safetySource is included because it changes
+// which safety providers are called.
 function buildCacheFingerprint(userConfig) {
     const fingerprint = {
         version: userConfig.version,
@@ -69,7 +74,7 @@ function buildCacheFingerprint(userConfig) {
                 keyHash: hashValue(userConfig.providers.publicmetadb.apiKey),
             },
         },
-        ratings: userConfig.ratings,
+        safetySource: userConfig.ratings?.safetySource || null,
     };
 
     return crypto

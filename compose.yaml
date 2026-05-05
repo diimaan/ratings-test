@@ -20,7 +20,7 @@ services:
       PUBLICMETADB_API_URL: ${PUBLICMETADB_API_URL}
       PUBLICMETADB_FALLBACK_MODE: ${PUBLICMETADB_FALLBACK_MODE:-auto}
       REDIS_URL: ${REDIS_URL}
-      CONFIG_STORE_DRIVER: ${CONFIG_STORE_DRIVER:-sqlite}
+      REDIS_REQUIRED: ${REDIS_REQUIRED:-true}
       SQLITE_DB_PATH: ${SQLITE_DB_PATH}
       CONFIG_DATABASE_URL: ${CONFIG_DATABASE_URL:-}
       CONFIG_DATABASE_POOL_MAX: ${CONFIG_DATABASE_POOL_MAX:-10}
@@ -47,7 +47,8 @@ services:
     expose:
       - "${PORT}"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ${RATINGS_IMDB_DATA_DIR}:/app/data/imdb:ro
       - ${RATINGS_APP_DATA_DIR}:/app/data/app
@@ -75,6 +76,12 @@ services:
     restart: unless-stopped
     volumes:
       - ${RATINGS_REDIS_DATA_DIR}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     networks:
       - default
 

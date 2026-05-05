@@ -34,7 +34,7 @@ Still planned:
 
 - More UI polish
 - Full IMDb LMDB ingestion test on VPS dataset files
-- Automated tests for provider fallback and rating display behavior
+- Recorded-fixture tests for MDBList and CringeMDB response shapes
 - More complete production hardening
 
 ## Configuration Model
@@ -90,6 +90,8 @@ SAFETY_SOURCE=hybrid
   `CONFIG_DATABASE_SSL=require`.
 
 `CONFIG_ENCRYPTION_SECRET` must remain stable. If it changes, existing encrypted provider keys cannot be decrypted.
+
+Redis is required by default. The server fails fast at startup if it cannot reach Redis. Set `REDIS_REQUIRED=false` only for local dev or test runs without a Redis instance.
 
 This addon runs in BYOB mode. The base `/manifest.json` exists only to send users through configuration, and stream results require a saved UUID config.
 

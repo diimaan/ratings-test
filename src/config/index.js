@@ -36,6 +36,13 @@ const config = {
     jikan: userConfig.providers.jikan,
     redis: {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
+        // Redis is required by default. Set REDIS_REQUIRED=false for
+        // local dev or test runs without a running Redis instance.
+        required: !['false', '0', 'no', 'off'].includes(
+            String(process.env.REDIS_REQUIRED ?? 'true').trim().toLowerCase()
+        ),
+        startupReadyAttempts: parsePositiveInt(process.env.REDIS_STARTUP_READY_ATTEMPTS, 20),
+        startupReadyDelayMs: parsePositiveInt(process.env.REDIS_STARTUP_READY_DELAY_MS, 500),
     },
     storage: {
         // User-config store driver. Defaults to sqlite. Set to "postgres"
@@ -66,8 +73,6 @@ const config = {
         imdbBaseUrl: process.env.IMDB_BASE_URL || 'https://www.imdb.com',
         commonSenseBaseUrl: process.env.COMMONSENSE_BASE_URL || 'https://www.commonsensemedia.org',
         cringeMdbBaseUrl: process.env.CRINGEMDB_BASE_URL || 'https://cringemdb.com',
-        metacriticBaseUrl: process.env.METACRITIC_BASE_URL || 'https://www.metacritic.com',
-        rottentomatoesBaseUrl: process.env.ROTTENTOMATOES_BASE_URL || 'https://www.rottentomatoes.com',
     },
     imdbDataset: {
         mode: (process.env.IMDB_DATASET_MODE || 'required').trim().toLowerCase(),

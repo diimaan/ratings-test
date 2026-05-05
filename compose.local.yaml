@@ -23,7 +23,7 @@ services:
       PUBLICMETADB_FALLBACK_MODE: ${PUBLICMETADB_FALLBACK_MODE:-auto}
       JIKAN_API_URL: ${JIKAN_API_URL:-https://api.jikan.moe/v4}
       REDIS_URL: redis://redis:6379
-      CONFIG_STORE_DRIVER: ${CONFIG_STORE_DRIVER:-sqlite}
+      REDIS_REQUIRED: ${REDIS_REQUIRED:-true}
       SQLITE_DB_PATH: /app/data/app/ratings.sqlite
       CONFIG_DATABASE_URL: ${CONFIG_DATABASE_URL:-}
       CONFIG_DATABASE_SSL: ${CONFIG_DATABASE_SSL:-}
@@ -45,7 +45,8 @@ services:
       ADDON_SUFFIX: ${ADDON_SUFFIX:-Local}
       VITE_HOME_BLURB: ${VITE_HOME_BLURB}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ratings-app-local:/app/data/app
       - ratings-lmdb-local:/app/data/lmdb
@@ -64,6 +65,12 @@ services:
       - "6379:6379"
     volumes:
       - ratings-redis-local:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
 volumes:
   ratings-redis-local:
