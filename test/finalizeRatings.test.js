@@ -11,7 +11,13 @@ process.env.LOG_LEVEL = 'error';
 
 const {
     finalizeRatings,
+    applyUserDisplayPreferences,
 } = require('../src/services/finalizeRatings');
+
+function finalizeAndApplyPrefs(args) {
+    const all = finalizeRatings(args);
+    return applyUserDisplayPreferences(all, args.userConfig);
+}
 
 function userConfig({ enabled, order }) {
     return {
@@ -25,7 +31,7 @@ function userConfig({ enabled, order }) {
 }
 
 test('prioritizes local IMDb and native TMDb over aggregate fallback results', () => {
-    const ratings = finalizeRatings({
+    const ratings = finalizeAndApplyPrefs({
         type: 'movie',
         imdbResults: [{ source: 'IMDb (Movie)', value: '8.7/10' }],
         tmdbResults: [{ source: 'TMDb (Movie)', value: '82/100' }],
@@ -54,7 +60,7 @@ test('prioritizes local IMDb and native TMDb over aggregate fallback results', (
 });
 
 test('uses aggregate IMDb fallback when local IMDb result is missing', () => {
-    const ratings = finalizeRatings({
+    const ratings = finalizeAndApplyPrefs({
         type: 'movie',
         imdbResults: [],
         tmdbResults: [],
@@ -79,7 +85,7 @@ test('uses aggregate IMDb fallback when local IMDb result is missing', () => {
 });
 
 test('uses MDBList IMDb fallback when local and PublicMetaDB results are missing', () => {
-    const ratings = finalizeRatings({
+    const ratings = finalizeAndApplyPrefs({
         type: 'movie',
         imdbResults: [],
         tmdbResults: [],
@@ -102,7 +108,7 @@ test('uses MDBList IMDb fallback when local and PublicMetaDB results are missing
 });
 
 test('honors custom rating order after provider family selection', () => {
-    const ratings = finalizeRatings({
+    const ratings = finalizeAndApplyPrefs({
         type: 'movie',
         imdbResults: [{ source: 'IMDb (Movie)', value: '8.7/10' }],
         tmdbResults: [{ source: 'TMDb (Movie)', value: '82/100' }],
@@ -124,7 +130,7 @@ test('honors custom rating order after provider family selection', () => {
 });
 
 test('prioritizes direct safety results over MDBList-derived safety results', () => {
-    const ratings = finalizeRatings({
+    const ratings = finalizeAndApplyPrefs({
         type: 'movie',
         imdbResults: [],
         tmdbResults: [],
@@ -152,7 +158,7 @@ test('prioritizes direct safety results over MDBList-derived safety results', ()
 });
 
 test('keeps MDBList-derived warnings when direct safety only returns an age rating', () => {
-    const ratings = finalizeRatings({
+    const ratings = finalizeAndApplyPrefs({
         type: 'movie',
         imdbResults: [],
         tmdbResults: [],

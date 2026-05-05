@@ -185,16 +185,23 @@ function finalizeRatings({
         }
     }
 
-    logger.debug(`[Ratings] familyMap before enabled filter: ${JSON.stringify(Array.from(familyMap.values()))}`);
+    const allFamilies = Array.from(familyMap.values());
+    logger.debug(`[Ratings] familyMap (unfiltered): ${JSON.stringify(allFamilies)}`);
+
+    // Stable canonical order: sort by source name. Per-user enabled/order
+    // preferences are applied later by applyUserDisplayPreferences so the
+    // cached payload is shareable across users.
+    void userConfig; // user-config dependency moved to applyUserDisplayPreferences
+    return allFamilies.sort((a, b) => a.source.localeCompare(b.source));
+}
+
+function applyUserDisplayPreferences(allFamilies, userConfig = config.userConfig) {
+    if (!Array.isArray(allFamilies)) return [];
+
     const ratingsConfig = userConfig?.ratings || config.ratings;
-
-    logger.debug(`[Ratings] enabled config: ${JSON.stringify(ratingsConfig.enabled)}`);
-
-    const filtered = Array.from(familyMap.values()).filter(item =>
+    const filtered = allFamilies.filter(item =>
         sourceMatchesEnabled(item.source, ratingsConfig.enabled)
     );
-
-    logger.debug(`[Ratings] after enabled filter: ${JSON.stringify(filtered)}`);
 
     filtered.sort((a, b) => {
         const aIndex = orderIndexForSource(a.source, ratingsConfig.order);
@@ -214,4 +221,5 @@ function finalizeRatings({
 
 module.exports = {
     finalizeRatings,
+    applyUserDisplayPreferences,
 };

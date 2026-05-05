@@ -6,6 +6,9 @@ const {
     getCompactLabel,
     getFullLabel,
 } = require('../utils/emojiMapper');
+const {
+    applyUserDisplayPreferences,
+} = require('../services/finalizeRatings');
 
 const DIVIDER = '───────────────';
 
@@ -351,13 +354,17 @@ function resolveDisplayMode(userConfig = config.userConfig, requestHeaders = {})
 }
 
 function formatRatingsCard(ratings, type, userConfig = config.userConfig, requestHeaders = {}) {
+    // Cached payloads are stored unfiltered/canonical-sorted. Apply the
+    // user's enabled / order preferences here so the same shared cache
+    // entry can serve users with different display configurations.
+    const ordered = applyUserDisplayPreferences(ratings, userConfig);
     const mode = resolveDisplayMode(userConfig, requestHeaders);
 
     if (mode === 'compact') {
-        return formatCompactRatings(ratings, type, userConfig);
+        return formatCompactRatings(ordered, type, userConfig);
     }
 
-    return formatFullRatings(ratings);
+    return formatFullRatings(ordered);
 }
 
 function buildRateLimitedStream(id) {

@@ -90,7 +90,15 @@ Quota and rate-limit considerations:
 - When upstream returns 429, the addon falls back to a long-TTL stale copy of the same title's last-known-good ratings (`STALE_FALLBACK_TTL_SECONDS`, default 14 days).
 - When stale fallback also misses, the addon surfaces a stream entitled `⚠️ Ratings rate-limited` with a prompt to add the user's own key at `/configure`.
 
-The user's saved config still stores their actual input. If the operator rotates an instance key, all empty-key users automatically pick up the new key on their next request, and the cache fingerprint changes so stale results from the old key are not served.
+The user's saved config still stores their actual input. If the operator rotates an instance key, all empty-key users automatically pick up the new key on their next request.
+
+### Shared rating cache
+
+All upstream calls we make are **title-keyed, not user-keyed** — TMDb and MDBList return the same data for any API key at the same tier. The cache is therefore scoped by `(apiUrls, safetySource)`, not by per-user keys: every user on the same operator deployment shares one cache pool. When user Alice's request fetches a title with her own MDBList key, the result is available to Bob (instance-default user) on his next request, reducing pressure on the operator's free-tier quota.
+
+To keep MDBList tier differences from causing downgrades, **cache writes are richness-gated**: a new fetch only replaces the cached entry if its richness score (rating sources × 1, safety signals × 2) is greater than or equal to the existing entry's. So a paid-tier MDBList user who fetched 6 ratings + safety signals will not be downgraded by a later free-tier fetch returning 4 ratings — the older richer entry stays.
+
+Per-user `enabled` and `order` preferences are applied at render time, not at cache time, so two users with different display configurations still share the same cached payload.
 
 ### User-config store backends
 

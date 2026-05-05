@@ -44,6 +44,32 @@ function hasRateLimitedProvider(results) {
     );
 }
 
+// Richness score for a result set. Used to gate cache writes so that a
+// poorer fetch (e.g. free-tier MDBList) cannot downgrade a richer cached
+// entry written by a paid-tier user, even though both fetches share the
+// same cache scope. Higher = better.
+function richnessScore(ratings) {
+    if (!Array.isArray(ratings)) return 0;
+    let score = 0;
+    for (const item of ratings) {
+        if (!item?.source) continue;
+        score += 1;
+        // Safety signals are harder to derive (need keywords/metadata),
+        // so weight them so that a fetch that recovered safety data wins
+        // even with the same numeric-rating count.
+        if (
+            item.source === 'Common Sense' ||
+            item.source === 'Parent Safe' ||
+            item.source === 'Not Safe' ||
+            item.source === 'Sexual Violence' ||
+            item.source === 'Sex & Nudity'
+        ) {
+            score += 1;
+        }
+    }
+    return score;
+}
+
 // Provider strategy:
 // - Local IMDb LMDB and native TMDb stay authoritative for their own families.
 // - MDBList is the primary aggregation layer and drives derived safety metadata.
@@ -569,17 +595,45 @@ async function resolveRatingsFresh(type, rawId, ctx, userConfig, cacheKey) {
             } else if (finalRatings.length > 0) {
                 const ttl = calculateTTL(date, finalRatings.length);
                 const staleTtl = staleFallbackTtlSeconds();
-                const [ok] = await Promise.all([
-                    redisClient.setRatingsHash(cacheKey, finalRatings, ttl),
-                    // Long-lived backup so rate-limited fetches can fall
-                    // back to last-known-good results.
-                    redisClient.setRatingsHash(staleCacheKey(cacheKey), finalRatings, staleTtl),
+                const newRichness = richnessScore(finalRatings);
+
+                // Richness gate: with the cache shared across users on the
+                // same operator deployment, a poorer fetch must not
+                // overwrite a richer one (e.g. paid-tier MDBList wrote 6
+                // ratings; a free-tier fetch later returns 4 — keep the 6).
+                const [existingFreshRichness, existingStaleRichness] = await Promise.all([
+                    redisClient.getRatingsHashRichness(cacheKey),
+                    redisClient.getRatingsHashRichness(staleCacheKey(cacheKey)),
                 ]);
 
-                if (ok) {
-                    logger.debug(`Cached ${rawId} fresh=${ttl}s stale=${staleTtl}s`);
+                const writes = [];
+                if (newRichness >= existingFreshRichness) {
+                    writes.push(redisClient.setRatingsHash(cacheKey, finalRatings, ttl, { richness: newRichness }));
                 } else {
-                    logger.warn(`Failed to cache ratings for ${rawId}`);
+                    logger.info(
+                        `[Cache] Skip fresh downgrade for ${rawId}: ` +
+                        `new=${newRichness} existing=${existingFreshRichness}`
+                    );
+                }
+
+                if (newRichness >= existingStaleRichness) {
+                    writes.push(redisClient.setRatingsHash(staleCacheKey(cacheKey), finalRatings, staleTtl, { richness: newRichness }));
+                } else {
+                    logger.info(
+                        `[Cache] Skip stale downgrade for ${rawId}: ` +
+                        `new=${newRichness} existing=${existingStaleRichness}`
+                    );
+                }
+
+                if (writes.length === 0) {
+                    logger.debug(`Cache fully skipped for ${rawId} (would downgrade)`);
+                } else {
+                    const results = await Promise.all(writes);
+                    if (results.every(Boolean)) {
+                        logger.debug(`Cached ${rawId} fresh=${ttl}s stale=${staleTtl}s richness=${newRichness}`);
+                    } else {
+                        logger.warn(`Some cache writes failed for ${rawId}`);
+                    }
                 }
             } else if (!aggregateRateLimited) {
                 // Genuinely empty (no rate limit). Negative-cache.
@@ -693,4 +747,5 @@ module.exports = {
     publicMetaDbFallbackMode,
     shouldResolveFallbackAggregate,
     fallbackAggregateResultsForFinalization,
+    richnessScore,
 };

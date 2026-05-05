@@ -57,7 +57,11 @@ test('cache fingerprint is stable across render-only preference changes', () => 
     assert.equal(a.cacheKey, e.cacheKey);
 });
 
-test('cache fingerprint changes when provider keys change', () => {
+test('cache fingerprint is STABLE across provider key changes (shared cache)', () => {
+    // Upstream data is title-keyed, not user-keyed: any API key at the
+    // same tier returns identical values. Cache scope is therefore shared
+    // across users on the same apiUrls. Tier downgrades are prevented at
+    // write time via the richness gate (see ratingService).
     const original = buildUserConfigFromInput(inputFor(), baseConfig);
     const rotated = buildUserConfigFromInput({
         ...inputFor(),
@@ -68,7 +72,21 @@ test('cache fingerprint changes when provider keys change', () => {
         },
     }, baseConfig);
 
-    assert.notEqual(original.cacheKey, rotated.cacheKey);
+    assert.equal(original.cacheKey, rotated.cacheKey);
+});
+
+test('cache fingerprint changes when an apiUrl changes (different upstream)', () => {
+    const original = buildUserConfigFromInput(inputFor(), baseConfig);
+    const rerouted = buildUserConfigFromInput({
+        ...inputFor(),
+        providers: {
+            tmdb: { apiKey: '', apiUrl: 'https://my-tmdb-proxy.example' },
+            mdblist: { apiKey: '', apiUrl: 'https://api.mdblist.com' },
+            publicmetadb: { apiKey: '', apiUrl: 'https://publicmetadb.com' },
+        },
+    }, baseConfig);
+
+    assert.notEqual(original.cacheKey, rerouted.cacheKey);
 });
 
 test('cache fingerprint changes when safetySource changes', () => {

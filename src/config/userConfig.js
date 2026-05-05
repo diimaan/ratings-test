@@ -53,26 +53,19 @@ function stableStringify(value) {
 }
 
 // Cache fingerprint covers ONLY inputs that change which upstream data is
-// fetched. Render-only preferences (enabled, order, displayMode,
-// compactLimit) are applied at format time and must not invalidate the
-// cached upstream payload. safetySource is included because it changes
-// which safety providers are called.
+// fetched, AND the data is identical regardless of which API key fetched
+// it (the upstreams we use have no per-user calculations or lists). So the
+// fingerprint is derived from the upstream URLs and the server-controlled
+// safetySource — NOT from per-user provider keys. This lets the cache be
+// shared across all users on the same operator deployment, with richness-
+// gated writes (in ratingService) preventing tier downgrades.
 function buildCacheFingerprint(userConfig) {
     const fingerprint = {
         version: userConfig.version,
         providers: {
-            tmdb: {
-                apiUrl: userConfig.providers.tmdb.apiUrl,
-                keyHash: hashValue(userConfig.providers.tmdb.apiKey),
-            },
-            mdblist: {
-                apiUrl: userConfig.providers.mdblist.apiUrl,
-                keyHash: hashValue(userConfig.providers.mdblist.apiKey),
-            },
-            publicmetadb: {
-                apiUrl: userConfig.providers.publicmetadb.apiUrl,
-                keyHash: hashValue(userConfig.providers.publicmetadb.apiKey),
-            },
+            tmdb: { apiUrl: userConfig.providers.tmdb.apiUrl },
+            mdblist: { apiUrl: userConfig.providers.mdblist.apiUrl },
+            publicmetadb: { apiUrl: userConfig.providers.publicmetadb.apiUrl },
         },
         safetySource: userConfig.ratings?.safetySource || null,
     };
@@ -83,6 +76,10 @@ function buildCacheFingerprint(userConfig) {
         .digest('hex')
         .slice(0, 20);
 }
+
+// Retained for symmetry with how earlier versions hashed individual
+// values; currently unused but kept for tests that hash arbitrary values.
+void hashValue;
 
 function buildUserConfigFromEnv(env = process.env) {
     const userConfig = {

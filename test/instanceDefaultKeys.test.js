@@ -59,7 +59,7 @@ test('cache fingerprint after resolution is identical for two empty-key users', 
     assert.equal(a.cacheKey, b.cacheKey);
 });
 
-test('cache fingerprint after resolution differs from a user with their own key', () => {
+test('cache fingerprint matches across users with own keys vs instance defaults (shared cache)', () => {
     const empty = userConfigService.applyInstanceDefaultProviderKeys(rawUserConfig());
     const own = userConfigService.applyInstanceDefaultProviderKeys(rawUserConfig({
         providers: {
@@ -69,7 +69,9 @@ test('cache fingerprint after resolution differs from a user with their own key'
             jikan: { apiUrl: 'https://api.jikan.moe/v4' },
         },
     }));
-    assert.notEqual(empty.cacheKey, own.cacheKey);
+    // Same apiUrls + same safetySource => same shared scope. Tier
+    // differences are handled by richness-gated writes (see ratingService).
+    assert.equal(empty.cacheKey, own.cacheKey);
 });
 
 test('instanceDefaultProvidersAvailable reports which env keys are populated', () => {
