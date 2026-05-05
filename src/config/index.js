@@ -45,10 +45,22 @@ const config = {
         startupReadyDelayMs: parsePositiveInt(process.env.REDIS_STARTUP_READY_DELAY_MS, 500),
     },
     storage: {
-        // User-config store driver. Defaults to sqlite. Other drivers
-        // (e.g. postgres) may add their own required env vars.
+        // User-config store driver. Defaults to sqlite. Set to "postgres"
+        // to use the Postgres backend; that driver requires
+        // CONFIG_DATABASE_URL (or PG* env vars) to be set.
         driver: String(process.env.CONFIG_STORE_DRIVER || 'sqlite').trim().toLowerCase(),
         sqlitePath: process.env.SQLITE_DB_PATH || '/app/data/app/ratings.sqlite',
+        postgres: {
+            connectionString: process.env.CONFIG_DATABASE_URL || process.env.DATABASE_URL || '',
+            poolMax: parsePositiveInt(process.env.CONFIG_DATABASE_POOL_MAX, 10),
+            idleTimeoutMs: parsePositiveInt(process.env.CONFIG_DATABASE_IDLE_TIMEOUT_MS, 30000),
+            connectionTimeoutMs: parsePositiveInt(process.env.CONFIG_DATABASE_CONNECTION_TIMEOUT_MS, 5000),
+            ssl: ['require', 'true', '1', 'yes', 'on'].includes(
+                String(process.env.CONFIG_DATABASE_SSL ?? '').trim().toLowerCase()
+            )
+                ? { rejectUnauthorized: false }
+                : false,
+        },
         lmdbPath: process.env.LMDB_DATA_DIR || '/app/data/lmdb',
         configEncryptionEnabled: Boolean(process.env.CONFIG_ENCRYPTION_SECRET),
     },

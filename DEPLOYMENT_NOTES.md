@@ -38,7 +38,11 @@ The local setup avoids those production assumptions and instead uses:
   in-flight request coalescing in the rating service. Horizontal scaling
   would require moving both to Redis.
 - Redis is local to this stack and used for hot cache / final result cache
-- SQLite stores user config and structured app data
+- User config is stored in either SQLite (default) or Postgres,
+  selected by `CONFIG_STORE_DRIVER`. Postgres is the recommended
+  backend for shared/managed deployments (e.g. elfhosted): set
+  `CONFIG_STORE_DRIVER=postgres` and `CONFIG_DATABASE_URL=...`.
+  The driver creates its own table and trigger on first start.
 - Provider keys inside saved user configs are encrypted with `CONFIG_ENCRYPTION_SECRET`
 - Keep `CONFIG_ENCRYPTION_SECRET` stable and backed up; changing it will make existing encrypted provider keys unreadable
 - `SAFETY_SOURCE=hybrid` is the production default; `direct` and `mdblist_conservative` are server-side debug modes, not normal user-facing choices
