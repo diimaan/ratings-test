@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const config = require('../config');
-const sqliteStore = require('../storage/sqliteStore');
+const userConfigStore = require('../storage/userConfigStore');
 const {
     buildUserConfigFromInput,
     buildCacheFingerprint,
@@ -36,7 +36,8 @@ async function getUserConfigById(configId) {
         return getDefaultUserConfig();
     }
 
-    return applyServerSafetySource(sqliteStore.getUserConfig(configId));
+    const stored = await userConfigStore.getUserConfig(configId);
+    return applyServerSafetySource(stored);
 }
 
 function publicConfigView(userConfig) {
@@ -135,12 +136,12 @@ async function createUserConfig(input = {}) {
 
     await validateUserConfigProviders(userConfig);
     const passwordHash = await hashPassword(input.password);
-    sqliteStore.saveUserConfig(userConfig, passwordHash);
+    await userConfigStore.saveUserConfig(userConfig, passwordHash);
     return userConfig;
 }
 
 async function getUserConfigForPassword(configId, password) {
-    const record = sqliteStore.getUserConfigRecord(configId);
+    const record = await userConfigStore.getUserConfigRecord(configId);
     if (!record || !(await verifyPassword(password, record.passwordHash))) {
         const err = new Error('Invalid config UUID or password.');
         err.statusCode = 401;
@@ -158,20 +159,20 @@ async function updateUserConfig(configId, input = {}) {
     }, config.userConfig));
 
     await validateUserConfigProviders(userConfig);
-    sqliteStore.saveUserConfig(userConfig);
+    await userConfigStore.saveUserConfig(userConfig);
     return userConfig;
 }
 
 async function deleteUserConfig(configId, password) {
     await getUserConfigForPassword(configId, password);
-    return sqliteStore.deleteUserConfig(configId);
+    return userConfigStore.deleteUserConfig(configId);
 }
 
 async function changeUserConfigPassword(configId, currentPassword, newPassword) {
     await getUserConfigForPassword(configId, currentPassword);
     assertValidPassword(newPassword);
     const passwordHash = await hashPassword(newPassword);
-    return sqliteStore.setUserConfigPasswordHash(configId, passwordHash);
+    return userConfigStore.setUserConfigPasswordHash(configId, passwordHash);
 }
 
 module.exports = {

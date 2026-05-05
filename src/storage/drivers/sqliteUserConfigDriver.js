@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
-const config = require('../config');
-const logger = require('../utils/logger');
+const config = require('../../config');
+const logger = require('../../utils/logger');
 const {
     decryptUserConfigSecrets,
     encryptUserConfigSecrets,
-} = require('../utils/configSecrets');
+} = require('../../utils/configSecrets');
 
 let db;
 
@@ -52,7 +52,11 @@ function getDb() {
     return db;
 }
 
-function getUserConfig(id) {
+async function init() {
+    getDb();
+}
+
+async function getUserConfig(id) {
     const row = getDb()
         .prepare('SELECT config_json FROM user_configs WHERE id = ?')
         .get(id);
@@ -61,7 +65,7 @@ function getUserConfig(id) {
     return decryptUserConfigSecrets(JSON.parse(row.config_json));
 }
 
-function getUserConfigRecord(id) {
+async function getUserConfigRecord(id) {
     const row = getDb()
         .prepare('SELECT config_json, password_hash FROM user_configs WHERE id = ?')
         .get(id);
@@ -74,7 +78,7 @@ function getUserConfigRecord(id) {
     };
 }
 
-function saveUserConfig(userConfig, passwordHash = null) {
+async function saveUserConfig(userConfig, passwordHash = null) {
     const storedConfig = encryptUserConfigSecrets(userConfig);
 
     getDb()
@@ -98,43 +102,46 @@ function saveUserConfig(userConfig, passwordHash = null) {
     return userConfig;
 }
 
-function deleteUserConfig(id) {
+async function deleteUserConfig(id) {
     return getDb()
         .prepare('DELETE FROM user_configs WHERE id = ?')
         .run(id)
         .changes > 0;
 }
 
-function setUserConfigPasswordHash(id, passwordHash) {
+async function setUserConfigPasswordHash(id, passwordHash) {
     return getDb()
         .prepare('UPDATE user_configs SET password_hash = ? WHERE id = ?')
         .run(passwordHash, id)
         .changes > 0;
 }
 
-function health() {
+async function health() {
     try {
         getDb().prepare('SELECT 1').get();
         return {
             ok: true,
+            driver: 'sqlite',
             path: config.storage.sqlitePath,
         };
     } catch (err) {
         return {
             ok: false,
+            driver: 'sqlite',
             path: config.storage.sqlitePath,
             error: err.message,
         };
     }
 }
 
-function close() {
+async function close() {
     if (!db) return;
     db.close();
     db = null;
 }
 
 module.exports = {
+    init,
     getUserConfig,
     getUserConfigRecord,
     saveUserConfig,

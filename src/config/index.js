@@ -45,6 +45,9 @@ const config = {
         startupReadyDelayMs: parsePositiveInt(process.env.REDIS_STARTUP_READY_DELAY_MS, 500),
     },
     storage: {
+        // User-config store driver. Defaults to sqlite. Other drivers
+        // (e.g. postgres) may add their own required env vars.
+        driver: String(process.env.CONFIG_STORE_DRIVER || 'sqlite').trim().toLowerCase(),
         sqlitePath: process.env.SQLITE_DB_PATH || '/app/data/app/ratings.sqlite',
         lmdbPath: process.env.LMDB_DATA_DIR || '/app/data/lmdb',
         configEncryptionEnabled: Boolean(process.env.CONFIG_ENCRYPTION_SECRET),
