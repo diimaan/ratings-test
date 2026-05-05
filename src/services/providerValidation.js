@@ -7,14 +7,14 @@ function createValidationError(message) {
     return err;
 }
 
-async function validateTmdb(providerConfig) {
-    if (!providerConfig?.apiKey) {
-        throw createValidationError('TMDb API key is required.');
-    }
+function instanceDefaultKey(provider) {
+    return config.userConfig?.providers?.[provider]?.apiKey || '';
+}
 
-    const res = await axios.get(`${providerConfig.apiUrl}/configuration`, {
+async function validateTmdbKey(apiKey, apiUrl) {
+    const res = await axios.get(`${apiUrl}/configuration`, {
         timeout: config.http.requestTimeoutMs || 12000,
-        params: { api_key: providerConfig.apiKey },
+        params: { api_key: apiKey },
         validateStatus: status => status >= 200 && status < 500,
     });
 
@@ -27,12 +27,10 @@ async function validateTmdb(providerConfig) {
     }
 }
 
-async function validateMdblist(providerConfig) {
-    if (!providerConfig?.apiKey) return;
-
-    const res = await axios.get(`${providerConfig.apiUrl}/imdb/movie/tt0133093`, {
+async function validateMdblistKey(apiKey, apiUrl) {
+    const res = await axios.get(`${apiUrl}/imdb/movie/tt0133093`, {
         timeout: config.http.requestTimeoutMs || 12000,
-        params: { apikey: providerConfig.apiKey },
+        params: { apikey: apiKey },
         validateStatus: status => status >= 200 && status < 500,
     });
 
@@ -43,6 +41,37 @@ async function validateMdblist(providerConfig) {
     if (res.status !== 200 && res.status !== 404) {
         throw createValidationError(`MDBList key validation failed with status ${res.status}.`);
     }
+}
+
+async function validateTmdb(providerConfig) {
+    const userKey = providerConfig?.apiKey || '';
+
+    if (userKey) {
+        // User supplied a key — verify it works.
+        await validateTmdbKey(userKey, providerConfig.apiUrl);
+        return;
+    }
+
+    if (instanceDefaultKey('tmdb')) {
+        // Falling back to instance default; trust the operator (and avoid
+        // hammering our own TMDb account on every signup).
+        return;
+    }
+
+    throw createValidationError(
+        'TMDb API key is required (no instance default is configured on this server).'
+    );
+}
+
+async function validateMdblist(providerConfig) {
+    const userKey = providerConfig?.apiKey || '';
+
+    if (userKey) {
+        await validateMdblistKey(userKey, providerConfig.apiUrl);
+        return;
+    }
+
+    // MDBList is optional — no error when neither user nor instance key is set.
 }
 
 async function validateUserConfigProviders(userConfig) {

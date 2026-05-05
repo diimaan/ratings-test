@@ -341,6 +341,12 @@ async function fetchByTmdb(type, tmdbId, providerConfig) {
         logger.error('[MDBList] Unauthorized. Check MDBLIST_API_KEY.');
         return null;
     }
+    if (res.status === 429) {
+        logger.warn(`[MDBList] Rate-limited (429) for TMDb ID ${tmdbId}`);
+        const err = new Error('MDBList rate limit exceeded');
+        err.rateLimited = true;
+        throw err;
+    }
     if (res.status !== 200) {
         logger.warn(`[MDBList] Unexpected status ${res.status} for TMDb ID ${tmdbId}`);
         return null;
@@ -379,6 +385,12 @@ async function fetchByImdb(type, imdbId, providerConfig) {
     if (res.status === 401 || res.status === 403) {
         logger.error('[MDBList] Unauthorized. Check MDBLIST_API_KEY.');
         return null;
+    }
+    if (res.status === 429) {
+        logger.warn(`[MDBList] Rate-limited (429) for IMDb ID ${baseId}`);
+        const err = new Error('MDBList rate limit exceeded');
+        err.rateLimited = true;
+        throw err;
     }
     if (res.status !== 200) {
         logger.warn(`[MDBList] Unexpected status ${res.status} for IMDb ID ${baseId}`);
@@ -419,6 +431,7 @@ async function getRating(type, imdbId, _streamInfo, tmdbId, userConfig = config.
             _providerStatus: {
                 provider: 'MDBList',
                 transient: true,
+                rateLimited: err.rateLimited === true,
                 error: err.message,
             },
         };

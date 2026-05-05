@@ -31,13 +31,58 @@ function applyServerSafetySource(userConfig) {
     return normalized;
 }
 
+// Fill blank user-supplied provider keys with the operator-provided
+// instance defaults from env (TMDB_API_KEY etc.). Used for streaming-time
+// userConfig only — never for views that round-trip back to the user, so
+// the operator's keys never leak into responses.
+function applyInstanceDefaultProviderKeys(userConfig) {
+    if (!userConfig) return userConfig;
+
+    const defaults = config.userConfig.providers;
+    const resolved = {
+        ...userConfig,
+        providers: {
+            ...userConfig.providers,
+            tmdb: {
+                ...userConfig.providers.tmdb,
+                apiKey: userConfig.providers.tmdb.apiKey || defaults.tmdb.apiKey || '',
+            },
+            mdblist: {
+                ...userConfig.providers.mdblist,
+                apiKey: userConfig.providers.mdblist.apiKey || defaults.mdblist.apiKey || '',
+            },
+            publicmetadb: {
+                ...userConfig.providers.publicmetadb,
+                apiKey: userConfig.providers.publicmetadb.apiKey || defaults.publicmetadb.apiKey || '',
+            },
+        },
+    };
+
+    // Recompute fingerprint so cache scope tracks the EFFECTIVE key.
+    // Two empty-key users sharing the same instance default share cache;
+    // rotating the instance key invalidates their caches naturally.
+    resolved.cacheKey = buildCacheFingerprint(resolved);
+    return resolved;
+}
+
+function instanceDefaultProvidersAvailable() {
+    const defaults = config.userConfig.providers;
+    return {
+        tmdb: Boolean(defaults.tmdb?.apiKey),
+        mdblist: Boolean(defaults.mdblist?.apiKey),
+        publicmetadb: Boolean(defaults.publicmetadb?.apiKey),
+    };
+}
+
 async function getUserConfigById(configId) {
     if (!configId || configId === 'default') {
         return getDefaultUserConfig();
     }
 
     const stored = await userConfigStore.getUserConfig(configId);
-    return applyServerSafetySource(stored);
+    // Streaming path: resolve instance defaults so the rating service sees
+    // a complete config.
+    return applyInstanceDefaultProviderKeys(applyServerSafetySource(stored));
 }
 
 function publicConfigView(userConfig) {
@@ -134,6 +179,9 @@ async function createUserConfig(input = {}) {
         id,
     }, config.userConfig));
 
+    // Validation handles instance-default fallback internally; we always
+    // persist the user's actual input so the operator's keys never end up
+    // in the user's encrypted blob.
     await validateUserConfigProviders(userConfig);
     const passwordHash = await hashPassword(input.password);
     await userConfigStore.saveUserConfig(userConfig, passwordHash);
@@ -185,4 +233,6 @@ module.exports = {
     changeUserConfigPassword,
     publicConfigView,
     privateConfigView,
+    instanceDefaultProvidersAvailable,
+    applyInstanceDefaultProviderKeys,
 };

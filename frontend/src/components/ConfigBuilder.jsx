@@ -83,6 +83,11 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   const [isRetrieving, setIsRetrieving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [instanceDefaults, setInstanceDefaults] = useState({
+    tmdb: false,
+    mdblist: false,
+    publicmetadb: false,
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -119,6 +124,11 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
         setContentSafetyEnabled(hasContentSafety(data.ratings?.enabled || ['Content Safety']));
         setEnabledRatings(normalizeRatingListForUi(data.ratings?.enabled || fallbackRatings));
         setRatingOrder(uniqueOrderedRatings(data));
+        setInstanceDefaults({
+          tmdb: Boolean(data.instanceDefaults?.tmdb),
+          mdblist: Boolean(data.instanceDefaults?.mdblist),
+          publicmetadb: Boolean(data.instanceDefaults?.publicmetadb),
+        });
       })
       .catch((err) => {
         toast.error(err.message);
@@ -142,7 +152,8 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
     [contentSafetyEnabled, orderedEnabledRatings]
   );
 
-  const canSave = providers.tmdb.apiKey.trim().length > 0 && password.length >= 8;
+  const tmdbReady = providers.tmdb.apiKey.trim().length > 0 || instanceDefaults.tmdb;
+  const canSave = tmdbReady && password.length >= 8;
   const isExistingConfig = configId !== 'default';
   const canInstall = isExistingConfig && manifestUrl.includes('/stremio/');
 
@@ -208,8 +219,8 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
   };
 
   const saveConfig = async () => {
-    if (!providers.tmdb.apiKey.trim()) {
-      toast.error('TMDb API key is required');
+    if (!providers.tmdb.apiKey.trim() && !instanceDefaults.tmdb) {
+      toast.error('TMDb API key is required (no instance default available)');
       return;
     }
 
@@ -503,16 +514,25 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
 
         <div className="grid gap-5">
           <label className="grid gap-2">
-            <span className="text-sm font-semibold text-gray-200">TMDb API key</span>
+            <span className="text-sm font-semibold text-gray-200">
+              TMDb API key
+              {instanceDefaults.tmdb && (
+                <span className="ml-2 rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">Optional — instance default available</span>
+              )}
+            </span>
             <input
               type="password"
               value={providers.tmdb.apiKey}
               onChange={(event) => updateProvider('tmdb', 'apiKey', event.target.value)}
               className="rounded-lg border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-              placeholder="Required"
+              placeholder={instanceDefaults.tmdb ? 'Leave blank to use the instance default' : 'Required'}
               autoComplete="off"
             />
-            <span className="text-xs text-gray-400">Validated on save. Required for TMDb ratings and reliable title mapping.</span>
+            <span className="text-xs text-gray-400">
+              {instanceDefaults.tmdb
+                ? 'This server provides a TMDb key. Leave blank to share it, or paste your own to use a separate quota.'
+                : 'Validated on save. Required for TMDb ratings and reliable title mapping.'}
+            </span>
           </label>
 
           <label className="grid gap-2">
@@ -530,26 +550,40 @@ export function ConfigBuilder({ defaultManifestPath = '/manifest.json' }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-gray-200">MDBList API key</span>
+              <span className="text-sm font-semibold text-gray-200">
+                MDBList API key
+                {instanceDefaults.mdblist && (
+                  <span className="ml-2 rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">Instance default available</span>
+                )}
+              </span>
               <input
                 type="password"
                 value={providers.mdblist.apiKey}
                 onChange={(event) => updateProvider('mdblist', 'apiKey', event.target.value)}
                 className="rounded-lg border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-                placeholder="Recommended"
+                placeholder={instanceDefaults.mdblist ? 'Leave blank to use the instance default' : 'Recommended'}
                 autoComplete="off"
               />
-              <span className="text-xs text-amber-200">Recommended for better rating and warning accuracy.</span>
+              <span className="text-xs text-amber-200">
+                {instanceDefaults.mdblist
+                  ? 'Server provides a shared MDBList key. Paste your own to use a separate quota.'
+                  : 'Recommended for better rating and warning accuracy.'}
+              </span>
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-gray-200">Public MetaDB key</span>
+              <span className="text-sm font-semibold text-gray-200">
+                Public MetaDB key
+                {instanceDefaults.publicmetadb && (
+                  <span className="ml-2 rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">Instance default available</span>
+                )}
+              </span>
               <input
                 type="password"
                 value={providers.publicmetadb.apiKey}
                 onChange={(event) => updateProvider('publicmetadb', 'apiKey', event.target.value)}
                 className="rounded-lg border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-                placeholder="Optional fallback"
+                placeholder={instanceDefaults.publicmetadb ? 'Leave blank to use the instance default' : 'Optional fallback'}
                 autoComplete="off"
               />
               <span className="text-xs text-gray-400">Experimental fallback when MDBList is unavailable or empty.</span>
