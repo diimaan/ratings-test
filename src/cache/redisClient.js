@@ -164,6 +164,58 @@ async function getRatingsHashOrMarker(key) {
     }
 }
 
+// Atomically increment a per-key fixed-window counter.
+// Returns { count, resetMs } where resetMs is ms-until-window-reset.
+// Uses INCR + PEXPIRE: first hit sets the window, subsequent hits within
+// the same window only increment.
+async function incrementFixedWindow(key, windowMs) {
+    if (!ready) return null;
+
+    try {
+        const multi = client.multi();
+        multi.incr(key);
+        multi.pTTL(key);
+        const [count, ttlMs] = await multi.exec();
+
+        if (Number(ttlMs) < 0) {
+            // Key just created (or had no TTL): set the window.
+            await client.pExpire(key, windowMs);
+            return { count: Number(count), resetMs: windowMs };
+        }
+
+        return { count: Number(count), resetMs: Number(ttlMs) };
+    } catch (err) {
+        logger.warn(`[RateLimit] Redis incrementFixedWindow failed: ${err.message}`);
+        return null;
+    }
+}
+
+// Atomically claim an in-flight slot. Returns true if THIS caller should
+// own the upstream fetch; false if another caller already has it.
+// Uses SET NX with a self-clearing TTL so a crashed claim eventually
+// expires.
+async function claimInFlight(key, ttlSeconds) {
+    if (!ready) return null;
+
+    try {
+        const result = await client.set(key, '1', { NX: true, EX: ttlSeconds });
+        return result === 'OK';
+    } catch (err) {
+        logger.warn(`[InFlight] claim failed: ${err.message}`);
+        return null;
+    }
+}
+
+async function releaseInFlight(key) {
+    if (!ready) return;
+
+    try {
+        await client.del(key);
+    } catch (err) {
+        logger.debug(`[InFlight] release failed: ${err.message}`);
+    }
+}
+
 async function setNegativeMarker(key, marker, ttlSeconds = config.cache.negativeTtlSeconds) {
     if (!ready) {
         logger.warn(`[setNegativeMarker] Redis not ready, skip "${key}"`);
@@ -202,6 +254,9 @@ module.exports = {
     getRatingsHash,
     getRatingsHashRichness,
     setRatingsHash,
+    incrementFixedWindow,
+    claimInFlight,
+    releaseInFlight,
     getRatingsHashOrMarker,
     setNegativeMarker,
     disconnect,

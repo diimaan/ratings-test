@@ -32,11 +32,32 @@ The local setup avoids those production assumptions and instead uses:
 
 ## Operational notes
 
-- This service is intended to run as a single replica per stack.
-  Two pieces of state are process-local and would not be shared across
-  replicas: the in-process rate limiter for `/api/config/*` and the
-  in-flight request coalescing in the rating service. Horizontal scaling
-  would require moving both to Redis.
+- The addon supports horizontal scaling. The rate limiter for
+  `/api/config/*` coordinates through Redis (`incrementFixedWindow`),
+  the rating cache lives in Redis and is shared across users
+  (richness-gated writes prevent tier downgrades), and provider-key
+  validation results are cached in Redis with a short TTL so signup
+  spikes don't burst-call upstream. The only remaining process-local
+  state is intra-replica request coalescing (`inFlightRequests` Map):
+  if two replicas miss cache for the same hot title at the same
+  instant, each does its own upstream fetch, but only one of those
+  fetches typically wins the richness gate and the result is then
+  available to everyone via shared Redis. This is bounded by replica
+  count, not user count.
+- The addon emits `Cache-Control` headers suitable for an HTTP edge
+  cache (Cloudflare, Fastly, Varnish):
+  - `/manifest.json`, `/stremio/<uuid>/manifest.json`, and
+    `/stremio/<uuid>/stream/<type>/<id>.json` set
+    `public, max-age=300, s-maxage=300, stale-while-revalidate=...`,
+    and stream responses set `Vary: User-Agent` so the auto display
+    mode (TV vs desktop) doesn't bleed across UA families. TTLs are
+    tunable via `EDGE_STREAM_MAX_AGE_SECONDS`,
+    `EDGE_MANIFEST_MAX_AGE_SECONDS`, and `EDGE_DEFAULTS_MAX_AGE_SECONDS`.
+  - All mutating `/api/config/*` endpoints set `Cache-Control: no-store`,
+    so credentials and password-protected mutations are never edge-cached.
+  - In Cloudflare, set "Cache Level: Standard" and "Origin Cache
+    Control: On" for the addon hostname; CF will honour the headers
+    above without further rules.
 - Redis is local to this stack and used for hot cache / final result cache
 - User config is stored in either SQLite (default) or Postgres,
   selected by `CONFIG_STORE_DRIVER`. Postgres is the recommended

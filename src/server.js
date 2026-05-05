@@ -111,6 +111,10 @@ async function startServer() {
     });
 
     app.get('/health', async (_req, res) => {
+        // Health must never be edge-cached: the orchestrator needs the
+        // current up/down state of THIS replica, not a stale CDN copy.
+        res.set('Cache-Control', 'no-store');
+
         const userConfigStoreHealth = await userConfigStore.health();
         const lmdb = lmdbStore.health();
         const storageOk = userConfigStoreHealth.ok && lmdb.ok;

@@ -52,7 +52,10 @@ const config = {
         sqlitePath: process.env.SQLITE_DB_PATH || '/app/data/app/ratings.sqlite',
         postgres: {
             connectionString: process.env.CONFIG_DATABASE_URL || process.env.DATABASE_URL || '',
-            poolMax: parsePositiveInt(process.env.CONFIG_DATABASE_POOL_MAX, 10),
+            // Default raised from 10 to 25 for shared deployments. Tune
+            // up further if you see "remaining connection slots are
+            // reserved" or pool exhaustion under signup spikes.
+            poolMax: parsePositiveInt(process.env.CONFIG_DATABASE_POOL_MAX, 25),
             idleTimeoutMs: parsePositiveInt(process.env.CONFIG_DATABASE_IDLE_TIMEOUT_MS, 30000),
             connectionTimeoutMs: parsePositiveInt(process.env.CONFIG_DATABASE_CONNECTION_TIMEOUT_MS, 5000),
             ssl: ['require', 'true', '1', 'yes', 'on'].includes(
@@ -70,6 +73,12 @@ const config = {
         // Long-lived backup of successful results, used as fallback when
         // upstream is rate-limited and the fresh cache has expired.
         staleFallbackTtlSeconds: parsePositiveInt(process.env.STALE_FALLBACK_TTL_SECONDS, 14 * 86400),
+        // Edge-cache TTLs (Cache-Control max-age + s-maxage) on public,
+        // idempotent endpoints. Cloudflare / any HTTP proxy honours these;
+        // the origin shared cache (Redis) is the second tier.
+        edgeStreamMaxAgeSeconds: parsePositiveInt(process.env.EDGE_STREAM_MAX_AGE_SECONDS, 300),
+        edgeManifestMaxAgeSeconds: parsePositiveInt(process.env.EDGE_MANIFEST_MAX_AGE_SECONDS, 300),
+        edgeDefaultsMaxAgeSeconds: parsePositiveInt(process.env.EDGE_DEFAULTS_MAX_AGE_SECONDS, 60),
     },
     ratings: userConfig.ratings,
     sources: {

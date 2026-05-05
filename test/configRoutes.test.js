@@ -231,3 +231,35 @@ test('BYOB addon routes keep base/default streams disabled', async (t) => {
     assert.equal(defaultScopedStream.response.status, 200);
     assert.deepEqual(defaultScopedStream.body, { streams: [] });
 });
+
+test('edge cache headers are set on cacheable routes and absent on mutations', async (t) => {
+    const { server, baseUrl } = await listen(createTestApp());
+
+    t.after(async () => {
+        await closeServer(server);
+        await userConfigStore.close();
+    });
+
+    // Public manifest is edge-cacheable
+    const manifest = await fetch(`${baseUrl}/manifest.json`);
+    assert.match(manifest.headers.get('cache-control') || '', /max-age=\d+/);
+    assert.match(manifest.headers.get('cache-control') || '', /s-maxage=\d+/);
+
+    // Stream responses include Vary: User-Agent and edge-cacheable headers
+    const stream = await fetch(`${baseUrl}/stremio/default/stream/movie/tt0133093.json`);
+    assert.match(stream.headers.get('cache-control') || '', /max-age=\d+/);
+    assert.equal(stream.headers.get('vary'), 'User-Agent');
+
+    // /api/config/defaults is briefly edge-cacheable
+    const defaults = await fetch(`${baseUrl}/api/config/defaults`);
+    assert.match(defaults.headers.get('cache-control') || '', /max-age=\d+/);
+
+    // Mutating routes must NEVER be cached. POST /api/config (no body)
+    // returns 400 here, but the no-store header should still be set.
+    const post = await fetch(`${baseUrl}/api/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+    });
+    assert.equal(post.headers.get('cache-control'), 'no-store');
+});
