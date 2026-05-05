@@ -31,10 +31,9 @@
 
     COPY package.json .
     COPY src ./src
-    COPY api ./api
 
     HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:$PORT/ || exit 1
+    CMD curl -fsS "http://localhost:${PORT}/health" || exit 1
 
     ENV NODE_ENV=production
     ENV PORT=61262
